@@ -34,9 +34,37 @@ func DocsHandler(c *gin.Context) {
 		}
 	}
 
+	// Organize routes by tags and groups
+	routesByTag := make(map[string][]RouteEntry)
+	routesByGroup := make(map[string][]RouteEntry)
+	untaggedRoutes := []RouteEntry{}
+	ungroupedRoutes := []RouteEntry{}
+
+	for _, route := range routes {
+		// Group by tags
+		if len(route.Tags) > 0 {
+			for _, tag := range route.Tags {
+				routesByTag[tag] = append(routesByTag[tag], route)
+			}
+		} else {
+			untaggedRoutes = append(untaggedRoutes, route)
+		}
+
+		// Group by groups
+		if route.Group != nil {
+			routesByGroup[route.Group.Name] = append(routesByGroup[route.Group.Name], route)
+		} else {
+			ungroupedRoutes = append(ungroupedRoutes, route)
+		}
+	}
+
 	// Create data structure for template
 	data := struct {
 		Routes            []RouteEntry
+		RoutesByTag       map[string][]RouteEntry
+		RoutesByGroup     map[string][]RouteEntry
+		UntaggedRoutes    []RouteEntry
+		UngroupedRoutes   []RouteEntry
 		Groups            map[string]*GroupInfo
 		TotalRoutes       int
 		UniqueMethods     int
@@ -44,6 +72,10 @@ func DocsHandler(c *gin.Context) {
 		UniqueMiddlewares int
 	}{
 		Routes:            routes,
+		RoutesByTag:       routesByTag,
+		RoutesByGroup:     routesByGroup,
+		UntaggedRoutes:    untaggedRoutes,
+		UngroupedRoutes:   ungroupedRoutes,
 		Groups:            groups,
 		TotalRoutes:       len(routes),
 		UniqueMethods:     len(methodsMap),
@@ -238,6 +270,81 @@ func DocsHandler(c *gin.Context) {
             text-decoration: none;
             color: white;
         }
+        
+        /* Collapse styles */
+        .collapse-section {
+            margin: 20px 0;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .collapse-header {
+            background: #f8f9fa;
+            padding: 15px 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #e9ecef;
+            transition: background-color 0.2s;
+        }
+        .collapse-header:hover {
+            background: #e9ecef;
+        }
+        .collapse-header h3 {
+            margin: 0;
+            color: #495057;
+            font-size: 1.1rem;
+        }
+        .collapse-icon {
+            font-size: 1.2rem;
+            transition: transform 0.3s;
+        }
+        .collapse-icon.collapsed {
+            transform: rotate(-90deg);
+        }
+        .collapse-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+        .collapse-content.expanded {
+            max-height: 2000px;
+        }
+        .collapse-routes {
+            padding: 0;
+        }
+        .collapse-routes .route {
+            border-bottom: 1px solid #e9ecef;
+            margin: 0;
+        }
+        .collapse-routes .route:last-child {
+            border-bottom: none;
+        }
+        .view-toggle {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 10px 0;
+            font-size: 0.9rem;
+        }
+        .view-toggle:hover {
+            background: #0056b3;
+        }
+        .view-toggle.active {
+            background: #28a745;
+        }
+        .view-controls {
+            padding: 20px 30px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
     </style>
 </head>
 <body>
@@ -266,68 +373,339 @@ func DocsHandler(c *gin.Context) {
             </div>
         </div>
         
-        {{if .Groups}}
-        <div class="groups-section">
-            <h3>📁 Route Groups</h3>
-            {{range .Groups}}
-            <div class="group-item">
-                <strong>{{.Name}}</strong> → {{.Prefix}}
-                {{if .Description}}<br><small>{{.Description}}</small>{{end}}
+        <div class="view-controls">
+            <button class="view-toggle active" onclick="switchView('tags')">📋 Por Tags</button>
+            <button class="view-toggle" onclick="switchView('groups')">📁 Por Grupos</button>
+            <button class="view-toggle" onclick="switchView('all')">📄 Todas as Rotas</button>
+            <div style="margin-left: auto;">
+                <button class="view-toggle" onclick="expandAll()" style="background: #28a745;">🔽 Expandir Tudo</button>
+                <button class="view-toggle" onclick="collapseAll()" style="background: #6c757d;">🔼 Colapsar Tudo</button>
+            </div>
+        </div>
+        
+        <!-- Routes by Tags -->
+        <div id="tags-view" class="view-content">
+            {{if .RoutesByTag}}
+                {{range $tag, $routes := .RoutesByTag}}
+                <div class="collapse-section">
+                    <div class="collapse-header" onclick="toggleCollapse('tag-{{$tag}}')">
+                        <h3>🏷️ {{$tag}} ({{len $routes}} rotas)</h3>
+                        <span class="collapse-icon" id="icon-tag-{{$tag}}">▼</span>
+                    </div>
+                    <div class="collapse-content" id="content-tag-{{$tag}}">
+                        <div class="collapse-routes">
+                            {{range $routes}}
+                            <div class="route">
+                                <div class="route-header">
+                                    <span class="method method-{{.Method}}">{{.Method}}</span>
+                                    <span class="path">{{.Path}}</span>
+                                    <span class="handler">{{.FuncName}}</span>
+                                </div>
+                                
+                                {{if .Tags}}
+                                <div class="route-tags">
+                                    {{range .Tags}}
+                                    <span class="tag">{{.}}</span>
+                                    {{end}}
+                                </div>
+                                {{end}}
+                                
+                                {{if .Description}}
+                                <div class="description">{{.Description}}</div>
+                                {{end}}
+                                
+                                {{if .MiddlewareInfo}}
+                                <div class="middlewares">
+                                    {{range .MiddlewareInfo}}
+                                    <span class="middleware middleware-{{.Name | lower}}">
+                                        <strong>{{.Name}}</strong>
+                                        {{if .Args}}
+                                        <span class="middleware-args">
+                                            {{range $key, $value := .Args}}{{$key}}: {{$value}} {{end}}
+                                        </span>
+                                        {{end}}
+                                    </span>
+                                    {{end}}
+                                </div>
+                                {{end}}
+                            </div>
+                            {{end}}
+                        </div>
+                    </div>
+                </div>
+                {{end}}
+            {{end}}
+            
+            {{if .UntaggedRoutes}}
+            <div class="collapse-section">
+                <div class="collapse-header" onclick="toggleCollapse('untagged')">
+                    <h3>🏷️ Sem Tags ({{len .UntaggedRoutes}} rotas)</h3>
+                    <span class="collapse-icon" id="icon-untagged">▼</span>
+                </div>
+                <div class="collapse-content" id="content-untagged">
+                    <div class="collapse-routes">
+                        {{range .UntaggedRoutes}}
+                        <div class="route">
+                            <div class="route-header">
+                                <span class="method method-{{.Method}}">{{.Method}}</span>
+                                <span class="path">{{.Path}}</span>
+                                <span class="handler">{{.FuncName}}</span>
+                            </div>
+                            
+                            {{if .Description}}
+                            <div class="description">{{.Description}}</div>
+                            {{end}}
+                            
+                            {{if .MiddlewareInfo}}
+                            <div class="middlewares">
+                                {{range .MiddlewareInfo}}
+                                <span class="middleware middleware-{{.Name | lower}}">
+                                    <strong>{{.Name}}</strong>
+                                    {{if .Args}}
+                                    <span class="middleware-args">
+                                        {{range $key, $value := .Args}}{{$key}}: {{$value}} {{end}}
+                                    </span>
+                                    {{end}}
+                                </span>
+                                {{end}}
+                            </div>
+                            {{end}}
+                        </div>
+                        {{end}}
+                    </div>
+                </div>
             </div>
             {{end}}
         </div>
-        {{end}}
         
-        <div class="routes">
-            {{if .Routes}}
-                {{range .Routes}}
-                <div class="route">
-                    <div class="route-header">
-                        <span class="method method-{{.Method}}">{{.Method}}</span>
-                        <span class="path">{{.Path}}</span>
-                        <span class="handler">{{.FuncName}}</span>
+        <!-- Routes by Groups -->
+        <div id="groups-view" class="view-content" style="display: none;">
+            {{if .RoutesByGroup}}
+                {{range $group, $routes := .RoutesByGroup}}
+                <div class="collapse-section">
+                    <div class="collapse-header" onclick="toggleCollapse('group-{{$group}}')">
+                        <h3>📁 {{$group}} ({{len $routes}} rotas)</h3>
+                        <span class="collapse-icon" id="icon-group-{{$group}}">▼</span>
                     </div>
-                    
-                    {{if .Tags}}
-                    <div class="route-tags">
-                        {{range .Tags}}
-                        <span class="tag">{{.}}</span>
-                        {{end}}
-                    </div>
-                    {{end}}
-                    
-                    {{if .Description}}
-                    <div class="description">{{.Description}}</div>
-                    {{end}}
-                    
-                    {{if .MiddlewareInfo}}
-                    <div class="middlewares">
-                        {{range .MiddlewareInfo}}
-                        <span class="middleware middleware-{{.Name | lower}}">
-                            <strong>{{.Name}}</strong>
-                            {{if .Args}}
-                            <span class="middleware-args">
-                                {{range $key, $value := .Args}}{{$key}}: {{$value}} {{end}}
-                            </span>
+                    <div class="collapse-content" id="content-group-{{$group}}">
+                        <div class="collapse-routes">
+                            {{range $routes}}
+                            <div class="route">
+                                <div class="route-header">
+                                    <span class="method method-{{.Method}}">{{.Method}}</span>
+                                    <span class="path">{{.Path}}</span>
+                                    <span class="handler">{{.FuncName}}</span>
+                                </div>
+                                
+                                {{if .Tags}}
+                                <div class="route-tags">
+                                    {{range .Tags}}
+                                    <span class="tag">{{.}}</span>
+                                    {{end}}
+                                </div>
+                                {{end}}
+                                
+                                {{if .Description}}
+                                <div class="description">{{.Description}}</div>
+                                {{end}}
+                                
+                                {{if .MiddlewareInfo}}
+                                <div class="middlewares">
+                                    {{range .MiddlewareInfo}}
+                                    <span class="middleware middleware-{{.Name | lower}}">
+                                        <strong>{{.Name}}</strong>
+                                        {{if .Args}}
+                                        <span class="middleware-args">
+                                            {{range $key, $value := .Args}}{{$key}}: {{$value}} {{end}}
+                                        </span>
+                                        {{end}}
+                                    </span>
+                                    {{end}}
+                                </div>
+                                {{end}}
+                            </div>
                             {{end}}
-                        </span>
-                        {{end}}
+                        </div>
                     </div>
-                    {{end}}
-                    
-
                 </div>
                 {{end}}
-            {{else}}
-                <div class="empty-state">
-                    <h3>No registered routes</h3>
-                    <p>Add @Route annotations to your handlers to see them here.</p>
-                </div>
             {{end}}
+            
+            {{if .UngroupedRoutes}}
+            <div class="collapse-section">
+                <div class="collapse-header" onclick="toggleCollapse('ungrouped')">
+                    <h3>📁 Sem Grupo ({{len .UngroupedRoutes}} rotas)</h3>
+                    <span class="collapse-icon" id="icon-ungrouped">▼</span>
+                </div>
+                <div class="collapse-content" id="content-ungrouped">
+                    <div class="collapse-routes">
+                        {{range .UngroupedRoutes}}
+                        <div class="route">
+                            <div class="route-header">
+                                <span class="method method-{{.Method}}">{{.Method}}</span>
+                                <span class="path">{{.Path}}</span>
+                                <span class="handler">{{.FuncName}}</span>
+                            </div>
+                            
+                            {{if .Tags}}
+                            <div class="route-tags">
+                                {{range .Tags}}
+                                <span class="tag">{{.}}</span>
+                                {{end}}
+                            </div>
+                            {{end}}
+                            
+                            {{if .Description}}
+                            <div class="description">{{.Description}}</div>
+                            {{end}}
+                            
+                            {{if .MiddlewareInfo}}
+                            <div class="middlewares">
+                                {{range .MiddlewareInfo}}
+                                <span class="middleware middleware-{{.Name | lower}}">
+                                    <strong>{{.Name}}</strong>
+                                    {{if .Args}}
+                                    <span class="middleware-args">
+                                        {{range $key, $value := .Args}}{{$key}}: {{$value}} {{end}}
+                                    </span>
+                                    {{end}}
+                                </span>
+                                {{end}}
+                            </div>
+                            {{end}}
+                        </div>
+                        {{end}}
+                    </div>
+                </div>
+            </div>
+            {{end}}
+        </div>
+        
+        <!-- All Routes -->
+        <div id="all-view" class="view-content" style="display: none;">
+            <div class="routes">
+                {{if .Routes}}
+                    {{range .Routes}}
+                    <div class="route">
+                        <div class="route-header">
+                            <span class="method method-{{.Method}}">{{.Method}}</span>
+                            <span class="path">{{.Path}}</span>
+                            <span class="handler">{{.FuncName}}</span>
+                        </div>
+                        
+                        {{if .Tags}}
+                        <div class="route-tags">
+                            {{range .Tags}}
+                            <span class="tag">{{.}}</span>
+                            {{end}}
+                        </div>
+                        {{end}}
+                        
+                        {{if .Description}}
+                        <div class="description">{{.Description}}</div>
+                        {{end}}
+                        
+                        {{if .MiddlewareInfo}}
+                        <div class="middlewares">
+                            {{range .MiddlewareInfo}}
+                            <span class="middleware middleware-{{.Name | lower}}">
+                                <strong>{{.Name}}</strong>
+                                {{if .Args}}
+                                <span class="middleware-args">
+                                    {{range $key, $value := .Args}}{{$key}}: {{$value}} {{end}}
+                                </span>
+                                {{end}}
+                            </span>
+                            {{end}}
+                        </div>
+                        {{end}}
+                    </div>
+                    {{end}}
+                {{else}}
+                    <div class="empty-state">
+                        <h3>No registered routes</h3>
+                        <p>Add @Route annotations to your handlers to see them here.</p>
+                    </div>
+                {{end}}
+            </div>
         </div>
     </div>
     
     <a href="/decorators/docs.json" class="json-link">📄 JSON</a>
+    
+    <script>
+        // Toggle collapse functionality
+        function toggleCollapse(id) {
+            const content = document.getElementById('content-' + id);
+            const icon = document.getElementById('icon-' + id);
+            
+            if (content.classList.contains('expanded')) {
+                content.classList.remove('expanded');
+                icon.classList.add('collapsed');
+            } else {
+                content.classList.add('expanded');
+                icon.classList.remove('collapsed');
+            }
+        }
+        
+        // Switch between different views
+        function switchView(view) {
+            // Hide all views
+            document.getElementById('tags-view').style.display = 'none';
+            document.getElementById('groups-view').style.display = 'none';
+            document.getElementById('all-view').style.display = 'none';
+            
+            // Show selected view
+            document.getElementById(view + '-view').style.display = 'block';
+            
+            // Update button states
+            document.querySelectorAll('.view-toggle').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+        }
+        
+        // Expand all collapses in current view
+        function expandAll() {
+            const currentView = document.querySelector('.view-content[style*="block"]') || document.getElementById('tags-view');
+            const collapses = currentView.querySelectorAll('.collapse-content');
+            const icons = currentView.querySelectorAll('.collapse-icon');
+            
+            collapses.forEach(collapse => {
+                collapse.classList.add('expanded');
+            });
+            icons.forEach(icon => {
+                icon.classList.remove('collapsed');
+            });
+        }
+        
+        // Collapse all in current view
+        function collapseAll() {
+            const currentView = document.querySelector('.view-content[style*="block"]') || document.getElementById('tags-view');
+            const collapses = currentView.querySelectorAll('.collapse-content');
+            const icons = currentView.querySelectorAll('.collapse-icon');
+            
+            collapses.forEach(collapse => {
+                collapse.classList.remove('expanded');
+            });
+            icons.forEach(icon => {
+                icon.classList.add('collapsed');
+            });
+        }
+        
+        // Initialize - expand first collapse in each view
+        document.addEventListener('DOMContentLoaded', function() {
+            // Expand first collapse in tags view
+            const firstTagCollapse = document.querySelector('#tags-view .collapse-content');
+            if (firstTagCollapse) {
+                firstTagCollapse.classList.add('expanded');
+                const firstIcon = document.querySelector('#tags-view .collapse-icon');
+                if (firstIcon) {
+                    firstIcon.classList.remove('collapsed');
+                }
+            }
+        });
+    </script>
 </body>
 </html>
 `
