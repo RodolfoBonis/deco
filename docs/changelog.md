@@ -2,13 +2,13 @@
 
 ## Recent Changes
 
-ca496b7 Merge pull request #1 from RodolfoBonis/chore/ci-cd-adaptacao-framework
-8e0dc90 ci: fix notification jobs to run on any failure
-6c84bcb ci: fix test coverage command for Windows compatibility
-41bea5c ci: fix golangci-lint installation in GitHub Actions
-905d298 feat: restore decorators in example project and improve type exports
-bfb1a18 fix: resolve unused parameter warnings and improve code quality
-0f8a3ba ci: migrate from golint to golangci-lint with decorator support
-7a3d846 chore(core,ci): melhorias gerais, lint, workflows, semver, bugfixes e refatoração do framework
-5162b9f build(ci): script de incremento de versão robusto e semver automático
-7898a2f fix(ci-cd): corrige jobs de notificação para rodarem sempre com always() - agora notificações funcionam mesmo com falhas em outros jobs
+75de0f0 refactor: rename decorate-gen to deco and improve documentation automation (#18)
+fe63d56 chore: increment version to 0.3.0
+9f51360 feat: configure binary name as 'deco' and fix documentation generation (#17)
+ac922f1 chore: increment version to 0.2.0
+54a5e26 docs: update documentation for v0.1.12
+4474271 chore: increment version to 0.1.12
+6d5fa81 fix(workflow): resolve PowerShell syntax, Telegram formatting, and documentation issues (#16)
+472a5eb chore: increment version to 0.1.11
+e4901ea fix(workflow): resolve PowerShell syntax and Telegram formatting issues (#15)
+6dc757b chore: increment version to 0.1.10
