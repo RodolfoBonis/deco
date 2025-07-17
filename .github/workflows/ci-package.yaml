@@ -300,7 +300,16 @@ jobs:
         id: generate_success_message
         shell: bash
         run: |
-          chmod +x .config/scripts/escape_telegram_message.sh
+          # Verifica se o script existe e dá permissão de execução
+          if [ -f .config/scripts/escape_telegram_message.sh ]; then
+            chmod +x .config/scripts/escape_telegram_message.sh
+          else
+            echo "Warning: escape_telegram_message.sh not found, using basic escaping"
+            # Função básica de escape como fallback
+            escape_message() {
+              echo "$1" | sed 's/[][(){}~>#+=|{}.!-]/\\&/g'
+            }
+          fi
           
           echo '✅ **CI Pipeline Successful!**' > telegram_message_success.txt
           echo '' >> telegram_message_success.txt
@@ -314,7 +323,11 @@ jobs:
           echo '✨ All tests passed, code linted successfully, and no vulnerabilities found!' >> telegram_message_success.txt
           
           MESSAGE=$(cat telegram_message_success.txt)
-          ESCAPED_MESSAGE=$(.config/scripts/escape_telegram_message.sh "$MESSAGE")
+          if [ -f .config/scripts/escape_telegram_message.sh ]; then
+            ESCAPED_MESSAGE=$(.config/scripts/escape_telegram_message.sh "$MESSAGE")
+          else
+            ESCAPED_MESSAGE=$(escape_message "$MESSAGE")
+          fi
           echo "message<<EOF" >> $GITHUB_OUTPUT
           echo "$ESCAPED_MESSAGE" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
@@ -337,7 +350,16 @@ jobs:
         id: generate_error_message
         shell: bash
         run: |
-          chmod +x .config/scripts/escape_telegram_message.sh
+          # Verifica se o script existe e dá permissão de execução
+          if [ -f .config/scripts/escape_telegram_message.sh ]; then
+            chmod +x .config/scripts/escape_telegram_message.sh
+          else
+            echo "Warning: escape_telegram_message.sh not found, using basic escaping"
+            # Função básica de escape como fallback
+            escape_message() {
+              echo "$1" | sed 's/[][(){}~>#+=|{}.!-]/\\&/g'
+            }
+          fi
           
           echo '❌ **CI Pipeline Failed!**' > telegram_message_error.txt
           echo '' >> telegram_message_error.txt
@@ -358,7 +380,11 @@ jobs:
           echo '- Build Status: ${{ needs.build.result }}' >> telegram_message_error.txt
           
           MESSAGE=$(cat telegram_message_error.txt)
-          ESCAPED_MESSAGE=$(.config/scripts/escape_telegram_message.sh "$MESSAGE")
+          if [ -f .config/scripts/escape_telegram_message.sh ]; then
+            ESCAPED_MESSAGE=$(.config/scripts/escape_telegram_message.sh "$MESSAGE")
+          else
+            ESCAPED_MESSAGE=$(escape_message "$MESSAGE")
+          fi
           echo "message<<EOF" >> $GITHUB_OUTPUT
           echo "$ESCAPED_MESSAGE" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
