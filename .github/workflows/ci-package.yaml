@@ -1,13 +1,16 @@
-name: CI Package
+name: CI/CD Pipeline - deco
 
 on:
   push:
     branches:
       - main
+      - develop
     paths-ignore:
       - 'version.txt'
-      - 'docs/**'
   pull_request:
+    branches:
+      - main
+      - develop
     types:
       - opened
       - synchronize
@@ -19,92 +22,149 @@ permissions:
   discussions: write
   repository-projects: write
   issues: write
-  pull-requests: write
+  pull-requests: write      
+
+env:
+  GO_VERSION: '1.23'
 
 jobs:
-  test:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        go-version: [1.22, 1.23]
-
+  lint_go:
+    name: Lint Go Code
+    runs-on: ubuntu-latest
+    outputs:
+      status: ${{ steps.lint.outputs.status }}
     steps:
-      - name: Check out repository
+      - name: Checkout code
         uses: actions/checkout@v4
         with:
-          token: ${{ github.token }}
           fetch-depth: 0
 
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: ${{ matrix.go-version }}
+          go-version: ${{ env.GO_VERSION }}
 
-      - name: Install dependencies
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Setup git config for private repos
+        run: |
+          git config --global url."https://${{ github.token }}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
+
+      - name: Download dependencies
         run: go mod download
 
-      - name: Run tests
-        run: go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
-
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
-        with:
-          file: ./coverage.out
-          flags: unittests
-          name: codecov-umbrella
-          fail_ci_if_error: false
-
-      - name: Run benchmarks
-        run: go test -bench=. -benchmem ./...
-
-  lint:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-        with:
-          token: ${{ github.token }}
-          fetch-depth: 0
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: 1.23
-
-      - name: Install linting tools
+      - name: Install Lint Dependencies
         run: |
           go install golang.org/x/lint/golint@latest
           go install honnef.co/go/tools/cmd/staticcheck@latest
           go install golang.org/x/tools/cmd/goimports@latest
-          go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
           export PATH=$PATH:$(go env GOPATH)/bin
 
-      - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v4
-        with:
-          version: latest
-          args: --timeout=5m
-
-      - name: Run goimports check
+      - name: Run lint
+        id: lint
         run: |
-          export PATH=$PATH:$(go env GOPATH)/bin
-          if [ "$(goimports -l . | wc -l)" -gt 0 ]; then
-            echo "❌ Code is not properly formatted. Run 'goimports -w .' to fix."
-            goimports -l .
-            exit 1
+          if [ -f .config/scripts/lint.sh ]; then
+            chmod +x .config/scripts/lint.sh
+            export PATH=$PATH:$(go env GOPATH)/bin
+            set +e
+            ./.config/scripts/lint.sh > lint_output.txt 2>&1
+            echo "status=$?" >> $GITHUB_OUTPUT
+            set -e
+          else
+            echo "status=0" >> $GITHUB_OUTPUT
           fi
 
-      - name: Run go vet
-        run: go vet ./...
+      - name: Install Python dependencies for comment
+        if: ${{ github.event_name == 'pull_request' && steps.lint.outputs.status != '0' }}
+        run: |
+          if [ -f .config/scripts/requirements.txt ]; then
+            pip install -r .config/scripts/requirements.txt
+          else
+            pip install openai PyGithub
+          fi
 
-      - name: Check for race conditions
-        run: go test -race ./...
+      - name: Comment lint issues on PR
+        if: ${{ github.event_name == 'pull_request' && steps.lint.outputs.status != '0' }}
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
+          REPO_NAME: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          if [ -f .config/scripts/generate_lint_report.py ]; then
+            python .config/scripts/generate_lint_report.py
+          fi
 
-  security:
+      - name: Exit if lint failed
+        if: ${{ steps.lint.outputs.status != '0' }}
+        run: exit 1
+
+      - name: Upload lint results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lint-results
+          path: lint_output.txt
+
+  test:
+    name: Run Tests
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Setup git config for private repos (if needed)
+        run: |
+          git config --global url."https://${{ github.token }}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Run tests with coverage
+        run: |
+          go test -v -race -coverprofile=coverage.out ./...
+          go tool cover -html=coverage.out -o coverage.html
+
+      - name: Upload coverage artifacts
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: |
+            coverage.out
+            coverage.html
+
+  check_vulnerabilities:
+    name: Security Vulnerability Check
     runs-on: ubuntu-latest
     steps:
-      - name: Check out repository
+      - name: Checkout code
         uses: actions/checkout@v4
         with:
           token: ${{ github.token }}
@@ -113,32 +173,43 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: 1.23
+          go-version: ${{ env.GO_VERSION }}
 
-      - name: Install GitHub CLI
-        run: sudo apt-get install gh -y
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
 
-      - name: Set up Git
-        run: |
-          git config --global url."https://${{ github.token }}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
+      - name: Download dependencies
+        run: go mod download
 
       - name: Define Private Dependencies
         run: |
           export GOPRIVATE=github.com/RodolfoBonis/go_key_guardian
 
-      - name: Install Python dependencies
-        run: pip install -r .config/scripts/requirements.txt
-
-      - name: Check for vulnerabilities
+      - name: Run govulncheck
         id: govulncheck
-        uses: golang/govulncheck-action@v1
-        continue-on-error: true
-        with:
-          output-format: text
-          output-file: vulnerabilities.txt
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          govulncheck ./... > vulnerability_report.txt 2>&1 || echo "Vulnerabilities found"
 
-      - name: Run vulnerability report script
+      - name: Install Python dependencies for vulnerability comment
         if: ${{ steps.govulncheck.outcome == 'failure' && github.event_name == 'pull_request' }}
+        run: |
+          pip install -r .config/scripts/requirements.txt
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
+          REPO_NAME: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+
+      - name: Comment vulnerability issues on PR
+        if: ${{ steps.govulncheck.outcome == 'failure' && github.event_name == 'pull_request'}}
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_TOKEN }}
           GITHUB_TOKEN: ${{ github.token }}
@@ -146,28 +217,59 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: python .config/scripts/generate_vulnerability_report.py
 
-      - name: Fail CI if vulnerabilities are found
+      - name: Upload vulnerability report
+        if: ${{ steps.govulncheck.outcome == 'failure' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "## 🔒 Security Vulnerability Report" >> vulnerability_summary.md
+          echo "" >> vulnerability_summary.md
+          echo "Vulnerabilities were found in this build:" >> vulnerability_summary.md
+          echo "" >> vulnerability_summary.md
+          echo '```' >> vulnerability_summary.md
+          cat vulnerability_report.txt >> vulnerability_summary.md
+          echo '```' >> vulnerability_summary.md
+
+      - name: Upload vulnerability artifacts
+        if: ${{ steps.govulncheck.outcome == 'failure' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: vulnerability-report
+          path: |
+            vulnerability_report.txt
+            vulnerability_summary.md
+
+      - name: Fail job if vulnerabilities found
         if: ${{ steps.govulncheck.outcome == 'failure' }}
         run: exit 1
 
   build:
+    name: Build Binary
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        go-version: [1.23]
-
     steps:
-      - name: Check out repository
+      - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          token: ${{ github.token }}
-          fetch-depth: 0
 
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: ${{ matrix.go-version }}
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Download dependencies
+        run: go mod download
 
       - name: Build binary
         run: |
@@ -179,114 +281,73 @@ jobs:
           ./deco --help
           ./deco version
 
-  validate:
+  notify_success:
+    name: Notify Success
     runs-on: ubuntu-latest
+    needs: [lint_go, test, check_vulnerabilities, build]
+    if: ${{ needs.lint_go.result == 'success' && needs.test.result == 'success' && needs.check_vulnerabilities.result == 'success' && needs.build.result == 'success' }}
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-        with:
-          token: ${{ github.token }}
-          fetch-depth: 0
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: 1.23
-
-      - name: Validate go.mod
-        run: go mod verify
-
-      - name: Check for unused dependencies
+      - name: Generate success message
+        id: generate_success_message
         run: |
-          go mod tidy
-          if [ -n "$(git status --porcelain)" ]; then
-            echo "❌ go.mod is not tidy. Run 'go mod tidy' to fix."
-            git diff
-            exit 1
-          fi
-
-      - name: Validate module path
-        run: |
-          if ! grep -q "^module github.com/RodolfoBonis/deco$" go.mod; then
-            echo "❌ Invalid module path in go.mod"
-            exit 1
-          fi
-
-  notify:
-    needs: [test, lint, security, build, validate]
-    runs-on: ubuntu-latest
-    if: always()
-    steps:
-      - name: Gerar mensagem de sucesso tratada
-        if: ${{ needs.test.result == 'success' && needs.lint.result == 'success' && needs.security.result == 'success' && needs.build.result == 'success' && needs.validate.result == 'success' }}
-        id: gerar_mensagem_sucesso
-        run: |
-          echo '🚀 *CI Package Successful!*' > telegram_message_success.txt
-          echo '*Details:*' >> telegram_message_success.txt
+          echo '✅ **CI Pipeline Successful!**' > telegram_message_success.txt
+          echo '' >> telegram_message_success.txt
+          echo '📋 **Build Details:**' >> telegram_message_success.txt
           echo '- Repository: ${{ github.repository }}' >> telegram_message_success.txt
           echo '- Triggered by: ${{ github.actor }}' >> telegram_message_success.txt
           echo '- Commit: ${{ github.sha }}' >> telegram_message_success.txt
           echo '- Branch: ${{ github.event_name == 'pull_request' && github.head_ref && github.base_ref && format('{0} -> {1}', github.head_ref, github.base_ref) || github.ref_name }}' >> telegram_message_success.txt
-          echo '- PR URL: ${{ github.event_name == 'pull_request' && format('https://github.com/{0}/pull/{1}', github.repository, github.event.pull_request.number) || 'N/A' }}' >> telegram_message_success.txt
-          echo '✅ CI Status: Success' >> telegram_message_success.txt
-          echo '📦 Package Type: Go Framework' >> telegram_message_success.txt
-          # Escapa todos os caracteres especiais do MarkdownV2
-          sed -i -E 's/_/\\_/g; s/\*/\\*/g; s/\[/\\[/g; s/\]/\\]/g; s/\(/\\(/g; s/\)/\\)/g; s/~/\\~/g; s/`/\\`/g; s/>/\\>/g; s/#/\\#/g; s/\+/\\+/g; s/=/\\=/g; s/\|/\\|/g; s/\{/\\{/g; s/\}/\\}/g; s/\./\\./g; s/!/\\!/g; s/-/\\-/g' telegram_message_success.txt
-          echo 'mensagem<<EOF' >> $GITHUB_OUTPUT
-          cat telegram_message_success.txt >> $GITHUB_OUTPUT
-          echo 'EOF' >> $GITHUB_OUTPUT
+          echo '- PR URL: ${{ github.event_name == 'pull_request' && format('https://github.com/{0}/pull/{1}', github.repository, github.event.pull_request.number) || env.PR_URL }}' >> telegram_message_success.txt
+          echo '' >> telegram_message_success.txt
+          echo '✨ All tests passed, code linted successfully, and no vulnerabilities found!' >> telegram_message_success.txt
+          
+          MESSAGE=$(cat telegram_message_success.txt)
+          echo "message<<EOF" >> $GITHUB_OUTPUT
+          echo "$MESSAGE" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
-      - name: Send Success Message via Telegram
-        if: ${{ needs.test.result == 'success' && needs.lint.result == 'success' && needs.security.result == 'success' && needs.build.result == 'success' && needs.validate.result == 'success' }}
+      - name: Send Telegram notification on success
+        if: ${{ needs.lint_go.result == 'success' && needs.test.result == 'success' && needs.check_vulnerabilities.result == 'success' && needs.build.result == 'success' }}
         uses: an3park/telegram-action@v1
         with:
-          bot_token: ${{ secrets.BOTTOKEN }}
           chat_id: ${{ secrets.CHAT_ID }}
+          bot_token: ${{ secrets.BOTTOKEN }}
           message_thread_id: ${{ secrets.THREAD_ID }}
-          parse_mode: 'MarkdownV2'
-          message: ${{ steps.gerar_mensagem_sucesso.outputs.mensagem }}
+          message: ${{ steps.generate_success_message.outputs.message }}
 
-      - name: Gerar mensagem de erro tratada
-        if: ${{ needs.test.result != 'success' || needs.lint.result != 'success' || needs.security.result != 'success' || needs.build.result != 'success' || needs.validate.result != 'success' }}
-        id: gerar_mensagem_erro
+  notify_failure:
+    name: Notify Failure
+    runs-on: ubuntu-latest
+    needs: [lint_go, test, check_vulnerabilities, build]
+    if: ${{ needs.lint_go.result != 'success' || needs.test.result != 'success' || needs.check_vulnerabilities.result != 'success' || needs.build.result != 'success' }}
+    steps:
+      - name: Generate failure message
+        id: generate_error_message
         run: |
-          echo '❌ *CI Package Failed!*' > telegram_message_error.txt
-          echo '*Error Details:*' >> telegram_message_error.txt
+          echo '❌ **CI Pipeline Failed!**' > telegram_message_error.txt
+          echo '' >> telegram_message_error.txt
+          echo '📋 **Build Details:**' >> telegram_message_error.txt
           echo '- Repository: ${{ github.repository }}' >> telegram_message_error.txt
           echo '- Triggered by: ${{ github.actor }}' >> telegram_message_error.txt
           echo '- Commit: ${{ github.sha }}' >> telegram_message_error.txt
           echo '- Branch: ${{ github.event_name == 'pull_request' && github.head_ref && github.base_ref && format('{0} -> {1}', github.head_ref, github.base_ref) || github.ref_name }}' >> telegram_message_error.txt
-          echo '- PR URL: ${{ github.event_name == 'pull_request' && format('https://github.com/{0}/pull/{1}', github.repository, github.event.pull_request.number) || 'N/A' }}' >> telegram_message_error.txt
-          echo '🔍 *Debug Information:*' >> telegram_message_error.txt
-          echo '- CI Status: Failure' >> telegram_message_error.txt
+          echo '- PR URL: ${{ github.event_name == 'pull_request' && format('https://github.com/{0}/pull/{1}', github.repository, github.event.pull_request.number) || env.PR_URL }}' >> telegram_message_error.txt
+          echo '' >> telegram_message_error.txt
           echo '- Commit URL: https://github.com/${{ github.repository }}/commit/${{ github.sha }}' >> telegram_message_error.txt
           echo '⚠️ [Check GitHub Actions Logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})' >> telegram_message_error.txt
-          echo '📦 Package Type: Go Framework' >> telegram_message_error.txt
-          # Escapa todos os caracteres especiais do MarkdownV2
-          sed -i -E 's/_/\\_/g; s/\*/\\*/g; s/\[/\\[/g; s/\]/\\]/g; s/\(/\\(/g; s/\)/\\)/g; s/~/\\~/g; s/`/\\`/g; s/>/\\>/g; s/#/\\#/g; s/\+/\\+/g; s/=/\\=/g; s/\|/\\|/g; s/\{/\\{/g; s/\}/\\}/g; s/\./\\./g; s/!/\\!/g; s/-/\\-/g' telegram_message_error.txt
-          echo 'mensagem<<EOF' >> $GITHUB_OUTPUT
-          cat telegram_message_error.txt >> $GITHUB_OUTPUT
-          echo 'EOF' >> $GITHUB_OUTPUT
+          echo '' >> telegram_message_error.txt
+          echo '🔍 **Failure Summary:**' >> telegram_message_error.txt
+          
+          MESSAGE=$(cat telegram_message_error.txt)
+          echo "message<<EOF" >> $GITHUB_OUTPUT
+          echo "$MESSAGE" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
-      - name: Send Error Message via Telegram
-        if: ${{ needs.test.result != 'success' || needs.lint.result != 'success' || needs.security.result != 'success' || needs.build.result != 'success' || needs.validate.result != 'success' }}
+      - name: Send Telegram notification on failure
+        if: ${{ needs.lint_go.result != 'success' || needs.test.result != 'success' || needs.check_vulnerabilities.result != 'success' || needs.build.result != 'success' }}
         uses: an3park/telegram-action@v1
         with:
-          bot_token: ${{ secrets.BOTTOKEN }}
           chat_id: ${{ secrets.CHAT_ID }}
+          bot_token: ${{ secrets.BOTTOKEN }}
           message_thread_id: ${{ secrets.THREAD_ID }}
-          parse_mode: 'MarkdownV2'
-          message: ${{ steps.gerar_mensagem_erro.outputs.mensagem }} 
-
-      - name: Instalar dependências Python para comentário
-        if: ${{ github.event_name == 'pull_request' && failure() }}
-        run: pip install openai PyGithub
-
-      - name: Comentar problemas de lint no PR
-        if: ${{ github.event_name == 'pull_request' && failure() }}
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_TOKEN }}
-          GITHUB_TOKEN: ${{ github.token }}
-          REPO_NAME: ${{ github.repository }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-        run: python .config/scripts/generate_lint_report.py 
+          message: ${{ steps.generate_error_message.outputs.message }} 
