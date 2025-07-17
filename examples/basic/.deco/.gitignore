@@ -1,0 +1,7 @@
+# Files generateds automatically pelo gin-decorators
+*.go
+!.gitignore
+
+# Files de cache e temporários
+*.tmp
+*.cache

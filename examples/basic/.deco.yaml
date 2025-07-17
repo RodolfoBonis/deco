@@ -1,0 +1,81 @@
+version: "1.0"
+handlers:
+    include:
+        - handlers/*.go
+    exclude:
+        - '**/*_test.go'
+        - '**/mock_*.go'
+        - '**/mocks/**/*.go'
+        - vendor/**
+        - .git/**
+        - node_modules/**
+        - '**/*.pb.go'
+        - .deco/**
+generation: {}
+dev:
+    auto_discover: true
+    watch: false
+prod:
+    validate: true
+    minify: false
+redis:
+    enabled: false
+    address: localhost:6379
+    db: 0
+    pool_size: 10
+cache:
+    type: memory
+    default_ttl: 1h
+    max_size: 1000
+    compression: false
+rate_limit:
+    enabled: false
+    type: memory
+    default_rps: 100
+    burst_size: 200
+    key_func: ip
+metrics:
+    enabled: false
+    endpoint: /metrics
+    namespace: gin_decorators
+    subsystem: api
+    buckets:
+        - 0.1
+        - 0.3
+        - 1.2
+        - 5
+openapi:
+    version: 3.0.0
+    title: API Documentation
+    description: Generated API documentation
+    host: localhost:8080
+    base_path: /api
+    schemes:
+        - http
+        - https
+validation:
+    enabled: true
+    fail_fast: false
+    error_format: json
+websocket:
+    enabled: true
+    read_buffer: 1024
+    write_buffer: 1024
+    check_origin: false
+    compression: false
+    ping_interval: 54s
+    pong_timeout: 60s
+telemetry:
+    enabled: false
+    service_name: gin-decorators-app
+    service_version: 1.0.0
+    environment: development
+    endpoint: http://localhost:4317
+    insecure: true
+    sample_rate: 1
+client_sdk:
+    enabled: false
+    output_dir: ./sdk
+    languages:
+        - go
+    package_name: client
