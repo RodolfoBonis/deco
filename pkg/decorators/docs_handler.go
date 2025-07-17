@@ -209,45 +209,7 @@ func DocsHandler(c *gin.Context) {
             display: block;
             margin-top: 2px;
         }
-        .parameters {
-            margin: 15px 0;
-            background: #f8f9fa;
-            border-radius: 6px;
-            padding: 15px;
-        }
-        .parameters h4 {
-            margin: 0 0 10px 0;
-            font-size: 0.9rem;
-            color: #495057;
-        }
-        .parameter {
-            margin-bottom: 8px;
-            font-size: 0.85rem;
-        }
-        .param-name {
-            font-weight: bold;
-            color: #0066cc;
-        }
-        .param-type {
-            background: #e9ecef;
-            padding: 1px 6px;
-            border-radius: 3px;
-            font-size: 0.75rem;
-            margin-left: 6px;
-        }
-        .param-location {
-            background: #fff3cd;
-            color: #856404;
-            padding: 1px 6px;
-            border-radius: 3px;
-            font-size: 0.75rem;
-            margin-left: 6px;
-        }
-        .param-required {
-            color: #dc3545;
-            font-size: 0.75rem;
-            margin-left: 6px;
-        }
+
         .description {
             color: #6c757d;
             font-size: 0.85rem;
@@ -353,21 +315,7 @@ func DocsHandler(c *gin.Context) {
                     </div>
                     {{end}}
                     
-                    {{if .Parameters}}
-                    <div class="parameters">
-                        <h4>📋 Parâmetros</h4>
-                        {{range .Parameters}}
-                        <div class="parameter">
-                            <span class="param-name">{{.Name}}</span>
-                            <span class="param-type">{{.Type}}</span>
-                            <span class="param-location">{{.Location}}</span>
-                            {{if .Required}}<span class="param-required">obrigatório</span>{{end}}
-                            {{if .Description}}<br><small>{{.Description}}</small>{{end}}
-                            {{if .Example}}<br><small><em>Exemplo: {{.Example}}</em></small>{{end}}
-                        </div>
-                        {{end}}
-                    </div>
-                    {{end}}
+
                 </div>
                 {{end}}
             {{else}}
