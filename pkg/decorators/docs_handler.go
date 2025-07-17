@@ -25,6 +25,7 @@ func DocsHandler(c *gin.Context) {
 	methodsMap := make(map[string]bool)
 	totalMiddlewares := 0
 	uniqueMiddlewares := make(map[string]bool)
+	totalWebSockets := 0
 
 	for _, route := range routes {
 		methodsMap[route.Method] = true
@@ -32,6 +33,8 @@ func DocsHandler(c *gin.Context) {
 		for _, mw := range route.MiddlewareInfo {
 			uniqueMiddlewares[mw.Name] = true
 		}
+		// Count WebSocket handlers
+		totalWebSockets += len(route.WebSocketHandlers)
 	}
 
 	// Organize routes by tags and groups
@@ -70,6 +73,7 @@ func DocsHandler(c *gin.Context) {
 		UniqueMethods     int
 		TotalMiddlewares  int
 		UniqueMiddlewares int
+		TotalWebSockets   int
 	}{
 		Routes:            routes,
 		RoutesByTag:       routesByTag,
@@ -81,6 +85,7 @@ func DocsHandler(c *gin.Context) {
 		UniqueMethods:     len(methodsMap),
 		TotalMiddlewares:  totalMiddlewares,
 		UniqueMiddlewares: len(uniqueMiddlewares),
+		TotalWebSockets:   totalWebSockets,
 	}
 
 	htmlTemplate := `
@@ -370,6 +375,10 @@ func DocsHandler(c *gin.Context) {
             <div class="stat">
                 <div class="stat-number">{{.UniqueMiddlewares}}</div>
                 <div class="stat-label">Middleware types</div>
+            </div>
+            <div class="stat">
+                <div class="stat-number">{{.TotalWebSockets}}</div>
+                <div class="stat-label">WebSocket handlers</div>
             </div>
         </div>
         

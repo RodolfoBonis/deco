@@ -35,20 +35,21 @@ type GroupInfo struct {
 
 // RouteEntry represents complete information about a route
 type RouteEntry struct {
-	Method         string            `json:"method"`
-	Path           string            `json:"path"`
-	Handler        gin.HandlerFunc   `json:"-"`
-	Middlewares    []gin.HandlerFunc `json:"-"`
-	FuncName       string            `json:"func_name"`
-	PackageName    string            `json:"package_name"`
-	FileName       string            `json:"file_name"`
-	Description    string            `json:"description"`
-	Summary        string            `json:"summary"`
-	Tags           []string          `json:"tags"`
-	MiddlewareInfo []MiddlewareInfo  `json:"middleware_info"`
-	Parameters     []ParameterInfo   `json:"parameters"`
-	Group          *GroupInfo        `json:"group,omitempty"`
-	Responses      []ResponseInfo    `json:"responses,omitempty"` // Updated to use ResponseInfo
+	Method            string            `json:"method"`
+	Path              string            `json:"path"`
+	Handler           gin.HandlerFunc   `json:"-"`
+	Middlewares       []gin.HandlerFunc `json:"-"`
+	FuncName          string            `json:"func_name"`
+	PackageName       string            `json:"package_name"`
+	FileName          string            `json:"file_name"`
+	Description       string            `json:"description"`
+	Summary           string            `json:"summary"`
+	Tags              []string          `json:"tags"`
+	MiddlewareInfo    []MiddlewareInfo  `json:"middleware_info"`
+	Parameters        []ParameterInfo   `json:"parameters"`
+	Group             *GroupInfo        `json:"group,omitempty"`
+	Responses         []ResponseInfo    `json:"responses,omitempty"`         // Updated to use ResponseInfo
+	WebSocketHandlers []string          `json:"websocketHandlers,omitempty"` // WebSocket message types this function handles
 }
 
 // global route registry
