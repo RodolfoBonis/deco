@@ -75,7 +75,7 @@ func NewMemoryRateLimiter() *MemoryRateLimiter {
 }
 
 // Allow checks if the request can proceed (in-memory implementation)
-func (m *MemoryRateLimiter) Allow(ctx context.Context, key string, limit int, window time.Duration) (bool, int, time.Duration, error) {
+func (m *MemoryRateLimiter) Allow(_ context.Context, key string, limit int, window time.Duration) (allowed bool, remaining int, retryAfter time.Duration, err error) {
 	now := time.Now()
 
 	bucket, exists := m.buckets[key]
@@ -99,7 +99,7 @@ func (m *MemoryRateLimiter) Allow(ctx context.Context, key string, limit int, wi
 	} else {
 		// Add tokens proportionally
 		tokensToAdd := int(elapsed * time.Duration(limit) / window)
-		bucket.tokens = min(bucket.limit, bucket.tokens+tokensToAdd)
+		bucket.tokens = minValue(bucket.limit, bucket.tokens+tokensToAdd)
 		if tokensToAdd > 0 {
 			bucket.lastRefill = now
 		}
@@ -116,7 +116,7 @@ func (m *MemoryRateLimiter) Allow(ctx context.Context, key string, limit int, wi
 }
 
 // Reset clears the bucket for a key (in-memory implementation)
-func (m *MemoryRateLimiter) Reset(ctx context.Context, key string) error {
+func (m *MemoryRateLimiter) Reset(_ context.Context, key string) error {
 	delete(m.buckets, key)
 	return nil
 }
@@ -142,7 +142,7 @@ func NewRedisRateLimiter(config RedisConfig) (*RedisRateLimiter, error) {
 }
 
 // Allow checks if the request can proceed (Redis implementation)
-func (r *RedisRateLimiter) Allow(ctx context.Context, key string, limit int, window time.Duration) (bool, int, time.Duration, error) {
+func (r *RedisRateLimiter) Allow(ctx context.Context, key string, limit int, window time.Duration) (allowed bool, remaining int, retryAfter time.Duration, err error) {
 	// Lua script for atomic rate limiting operation
 	script := `
 		local key = KEYS[1]
@@ -185,15 +185,15 @@ func (r *RedisRateLimiter) Allow(ctx context.Context, key string, limit int, win
 	}
 
 	values := result.([]interface{})
-	allowed := values[0].(int64) == 1
-	remaining := int(values[1].(int64))
-	retryAfter := time.Duration(values[2].(int64)) * time.Second
+	allowed = values[0].(int64) == 1
+	remaining = int(values[1].(int64))
+	retryAfter = time.Duration(values[2].(int64)) * time.Second
 
 	return allowed, remaining, retryAfter, nil
 }
 
 // Reset clears the bucket for a key (Redis implementation)
-func (r *RedisRateLimiter) Reset(ctx context.Context, key string) error {
+func (r *RedisRateLimiter) Reset(_ context.Context, key string) error {
 	return r.client.Del(context.Background(), key).Err()
 }
 
@@ -277,7 +277,7 @@ func RateLimitByEndpoint(config *RateLimitConfig) gin.HandlerFunc {
 }
 
 // CustomRateLimit customizable rate limiting middleware
-func CustomRateLimit(limit int, window time.Duration, keyGen KeyGeneratorFunc, rateLimiterType string) gin.HandlerFunc {
+func CustomRateLimit(limit int, _ time.Duration, keyGen KeyGeneratorFunc, rateLimiterType string) gin.HandlerFunc {
 	config := &RateLimitConfig{
 		Enabled:    true,
 		Type:       rateLimiterType,
@@ -288,11 +288,11 @@ func CustomRateLimit(limit int, window time.Duration, keyGen KeyGeneratorFunc, r
 }
 
 // ParseRateLimitArgs parses @RateLimit decorator arguments
-func ParseRateLimitArgs(args []string) (int, time.Duration, string, KeyGeneratorFunc) {
-	limit := 100                // default
-	window := time.Minute       // default
-	rateLimiterType := "memory" // default
-	keyGen := IPKeyGenerator    // default
+func ParseRateLimitArgs(args []string) (limit int, window time.Duration, rateLimiterType string, keyGen KeyGeneratorFunc) {
+	limit = 100                // default
+	window = time.Minute       // default
+	rateLimiterType = "memory" // default
+	keyGen = IPKeyGenerator    // default
 
 	for _, arg := range args {
 		if strings.Contains(arg, "=") {
@@ -383,8 +383,8 @@ func createRateLimitMiddlewareInternal(args []string) gin.HandlerFunc {
 	}
 }
 
-// min helper function
-func min(a, b int) int {
+// minValue helper function
+func minValue(a, b int) int {
 	if a < b {
 		return a
 	}

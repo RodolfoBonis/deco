@@ -9,8 +9,11 @@ import (
 type LogLevel int
 
 const (
+	// LogLevelSilent indicates that no logs should be produced
 	LogLevelSilent LogLevel = iota
+	// LogLevelNormal indicates normal logging level
 	LogLevelNormal
+	// LogLevelVerbose indicates verbose logging level
 	LogLevelVerbose
 )
 

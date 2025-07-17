@@ -10,6 +10,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -404,7 +405,7 @@ func handleLegacyMode(rootDir, outputPath, packageName, templatePath string, val
 }
 
 // generateFromFilesWithConfig generates code with specific configuration
-func generateFromFilesWithConfig(handlerFiles []string, outputPath, packageName, templatePath string, validate, verbose bool, config *decorators.Config) error {
+func generateFromFilesWithConfig(handlerFiles []string, outputPath, packageName, templatePath string, _, verbose bool, config *decorators.Config) error {
 	// Extract common directory from files to use as root
 	rootDir := findCommonRoot(handlerFiles)
 
@@ -955,11 +956,35 @@ func (ds *DevServer) waitForPortFree() error {
 
 // killProcessesOnPort tries to kill processes using the port
 func (ds *DevServer) killProcessesOnPort() {
+	// Validate port to prevent command injection
+	if ds.Port == "" || !isValidPort(ds.Port) {
+		if ds.Verbose {
+			fmt.Printf("⚠️  Invalid port: %s\n", ds.Port)
+		}
+		return
+	}
+
 	// Command to find and kill processes on the port (works on macOS and Linux)
+	// #nosec G204
 	cmd := exec.Command("sh", "-c", fmt.Sprintf("lsof -ti :%s | xargs -r kill -9", ds.Port))
 	if err := cmd.Run(); err != nil && ds.Verbose {
 		fmt.Printf("⚠️  Could not force kill on port :%s: %v\n", ds.Port, err)
 	}
+}
+
+// isValidPort validates if the port string is safe for command execution
+func isValidPort(port string) bool {
+	// Check if port is numeric and within valid range
+	if port == "" {
+		return false
+	}
+
+	portNum, err := strconv.Atoi(port)
+	if err != nil {
+		return false
+	}
+
+	return portNum > 0 && portNum <= 65535
 }
 
 // isPortFree checks if the port is available
@@ -997,7 +1022,7 @@ func (ds *DevServer) Stop() error {
 // enhanceErrorWithSourceInfo attempts to map errors from generated files back to source files
 func enhanceErrorWithSourceInfo(err error, configFile string) error {
 	if err == nil {
-		return err
+		return nil
 	}
 
 	errStr := err.Error()

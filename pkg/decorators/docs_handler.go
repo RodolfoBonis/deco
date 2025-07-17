@@ -21,13 +21,14 @@ func DocsHandler(c *gin.Context) {
 	routes := GetRoutes()
 	groups := GetGroups()
 
-	// Calcular statistics
+	// Calculate statistics
 	methodsMap := make(map[string]bool)
 	totalMiddlewares := 0
 	uniqueMiddlewares := make(map[string]bool)
 	totalWebSockets := 0
 
-	for _, route := range routes {
+	for i := range routes {
+		route := &routes[i]
 		methodsMap[route.Method] = true
 		totalMiddlewares += len(route.MiddlewareInfo)
 		for _, mw := range route.MiddlewareInfo {
@@ -43,21 +44,22 @@ func DocsHandler(c *gin.Context) {
 	untaggedRoutes := []RouteEntry{}
 	ungroupedRoutes := []RouteEntry{}
 
-	for _, route := range routes {
+	for i := range routes {
+		route := &routes[i]
 		// Group by tags
 		if len(route.Tags) > 0 {
 			for _, tag := range route.Tags {
-				routesByTag[tag] = append(routesByTag[tag], route)
+				routesByTag[tag] = append(routesByTag[tag], *route)
 			}
 		} else {
-			untaggedRoutes = append(untaggedRoutes, route)
+			untaggedRoutes = append(untaggedRoutes, *route)
 		}
 
 		// Group by groups
 		if route.Group != nil {
-			routesByGroup[route.Group.Name] = append(routesByGroup[route.Group.Name], route)
+			routesByGroup[route.Group.Name] = append(routesByGroup[route.Group.Name], *route)
 		} else {
-			ungroupedRoutes = append(ungroupedRoutes, route)
+			ungroupedRoutes = append(ungroupedRoutes, *route)
 		}
 	}
 
@@ -721,9 +723,7 @@ func DocsHandler(c *gin.Context) {
 `
 
 	tmpl, err := template.New("docs").Funcs(template.FuncMap{
-		"lower": func(s string) string {
-			return strings.ToLower(s)
-		},
+		"lower": strings.ToLower,
 	}).Parse(htmlTemplate)
 	if err != nil {
 		c.JSON(500, gin.H{"error": "Error processing template"})

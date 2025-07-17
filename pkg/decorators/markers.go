@@ -339,13 +339,13 @@ func parseKeyValue(input, key string) string {
 }
 
 // createValidateMiddleware creates general validation middleware
-func createValidateMiddleware(args []string) gin.HandlerFunc {
+func createValidateMiddleware(_ []string) gin.HandlerFunc {
 	config := DefaultConfig().Validation
 	return ValidateStruct(&config)
 }
 
 // createValidateJSONMiddleware creates JSON validation middleware
-func createValidateJSONMiddleware(args []string) gin.HandlerFunc {
+func createValidateJSONMiddleware(_ []string) gin.HandlerFunc {
 	// For now, return basic middleware - target will be inferred at runtime
 
 	return gin.HandlerFunc(func(c *gin.Context) {
@@ -369,7 +369,7 @@ func createValidateJSONMiddleware(args []string) gin.HandlerFunc {
 }
 
 // createValidateQueryMiddleware creates query parameter validation middleware
-func createValidateQueryMiddleware(args []string) gin.HandlerFunc {
+func createValidateQueryMiddleware(_ []string) gin.HandlerFunc {
 
 	return gin.HandlerFunc(func(c *gin.Context) {
 		// Validate basic query parameters
@@ -391,7 +391,7 @@ func createValidateQueryMiddleware(args []string) gin.HandlerFunc {
 func createValidateParamsMiddleware(args []string) gin.HandlerFunc {
 	config := DefaultConfig().Validation
 
-	// Extract regras dos argumentos
+	// Extract rules from arguments
 	rules := make(map[string]string)
 	for _, arg := range args {
 		if strings.Contains(arg, "=") {
@@ -406,7 +406,7 @@ func createValidateParamsMiddleware(args []string) gin.HandlerFunc {
 }
 
 // createWebSocketMiddleware creates WebSocket middleware
-func createWebSocketMiddleware(args []string) gin.HandlerFunc {
+func createWebSocketMiddleware(_ []string) gin.HandlerFunc {
 	// Load configuration from file instead of using defaults
 	fullConfig, err := LoadConfig("")
 	if err != nil {
@@ -418,65 +418,65 @@ func createWebSocketMiddleware(args []string) gin.HandlerFunc {
 }
 
 // createCacheByURLMiddleware creates URL-based cache middleware
-func createCacheByURLMiddleware(args []string) gin.HandlerFunc {
+func createCacheByURLMiddleware(_ []string) gin.HandlerFunc {
 	config := DefaultConfig().Cache
 	return CacheByURL(&config)
 }
 
 // createCacheByUserMiddleware creates user+URL-based cache middleware
-func createCacheByUserMiddleware(args []string) gin.HandlerFunc {
+func createCacheByUserMiddleware(_ []string) gin.HandlerFunc {
 	config := DefaultConfig().Cache
 	return CacheByUserURL(&config)
 }
 
 // createPrometheusMiddleware creates Prometheus metrics middleware
-func createPrometheusMiddleware(args []string) gin.HandlerFunc {
+func createPrometheusMiddleware(_ []string) gin.HandlerFunc {
 	return PrometheusHandler()
 }
 
 // createHealthCheckMiddleware creates health check middleware
-func createHealthCheckMiddleware(args []string) gin.HandlerFunc {
+func createHealthCheckMiddleware(_ []string) gin.HandlerFunc {
 	return HealthCheckHandler()
 }
 
 // createCacheStatsMiddleware creates cache statistics middleware
-func createCacheStatsMiddleware(args []string) gin.HandlerFunc {
+func createCacheStatsMiddleware(_ []string) gin.HandlerFunc {
 	config := DefaultConfig().Cache
 	store := NewMemoryCache(config.MaxSize)
 	return CacheStatsHandler(store)
 }
 
 // createInvalidateCacheMiddleware creates cache invalidation middleware
-func createInvalidateCacheMiddleware(args []string) gin.HandlerFunc {
+func createInvalidateCacheMiddleware(_ []string) gin.HandlerFunc {
 	config := DefaultConfig().Cache
 	store := NewMemoryCache(config.MaxSize)
 	return InvalidateCacheHandler(store)
 }
 
 // createWebSocketStatsMiddleware creates WebSocket statistics middleware
-func createWebSocketStatsMiddleware(args []string) gin.HandlerFunc {
+func createWebSocketStatsMiddleware(_ []string) gin.HandlerFunc {
 	return WebSocketStatsHandler()
 }
 
 // createTracingStatsMiddleware creates tracing statistics middleware
-func createTracingStatsMiddleware(args []string) gin.HandlerFunc {
+func createTracingStatsMiddleware(_ []string) gin.HandlerFunc {
 	return TracingStatsHandler()
 }
 
 // createOpenAPIJSONMiddleware creates OpenAPI JSON middleware
-func createOpenAPIJSONMiddleware(args []string) gin.HandlerFunc {
+func createOpenAPIJSONMiddleware(_ []string) gin.HandlerFunc {
 	config := DefaultConfig()
 	return OpenAPIJSONHandler(config)
 }
 
 // createOpenAPIYAMLMiddleware creates OpenAPI YAML middleware
-func createOpenAPIYAMLMiddleware(args []string) gin.HandlerFunc {
+func createOpenAPIYAMLMiddleware(_ []string) gin.HandlerFunc {
 	config := DefaultConfig()
 	return OpenAPIYAMLHandler(config)
 }
 
 // createSwaggerUIMiddleware creates Swagger UI middleware
-func createSwaggerUIMiddleware(args []string) gin.HandlerFunc {
+func createSwaggerUIMiddleware(_ []string) gin.HandlerFunc {
 	config := DefaultConfig()
 	return SwaggerUIHandler(config)
 }
@@ -491,31 +491,31 @@ func createTraceMiddlewareWrapper(args []string) gin.HandlerFunc {
 }
 
 // createCacheByEndpointMiddleware creates endpoint-based cache middleware
-func createCacheByEndpointMiddleware(args []string) gin.HandlerFunc {
+func createCacheByEndpointMiddleware(_ []string) gin.HandlerFunc {
 	config := DefaultConfig().Cache
 	return CacheByEndpoint(&config)
 }
 
 // createRateLimitByIPMiddleware creates IP-based rate limiting middleware
-func createRateLimitByIPMiddleware(args []string) gin.HandlerFunc {
+func createRateLimitByIPMiddleware(_ []string) gin.HandlerFunc {
 	config := DefaultConfig().RateLimit
 	return RateLimitByIP(&config)
 }
 
 // createRateLimitByUserMiddleware creates user-based rate limiting middleware
-func createRateLimitByUserMiddleware(args []string) gin.HandlerFunc {
+func createRateLimitByUserMiddleware(_ []string) gin.HandlerFunc {
 	config := DefaultConfig().RateLimit
 	return RateLimitByUser(&config)
 }
 
 // createRateLimitByEndpointMiddleware creates endpoint-based rate limiting middleware
-func createRateLimitByEndpointMiddleware(args []string) gin.HandlerFunc {
+func createRateLimitByEndpointMiddleware(_ []string) gin.HandlerFunc {
 	config := DefaultConfig().RateLimit
 	return RateLimitByEndpoint(&config)
 }
 
 // createHealthCheckWithTracingMiddleware creates health check with tracing middleware
-func createHealthCheckWithTracingMiddleware(args []string) gin.HandlerFunc {
+func createHealthCheckWithTracingMiddleware(_ []string) gin.HandlerFunc {
 	return HealthCheckWithTracing()
 }
 

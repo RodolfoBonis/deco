@@ -82,7 +82,7 @@ func GetGroups() map[string]*GroupInfo {
 
 // RegisterRoute registers a new route in the framework
 func RegisterRoute(method, path string, handlers ...gin.HandlerFunc) {
-	RegisterRouteWithMeta(RouteEntry{
+	RegisterRouteWithMeta(&RouteEntry{
 		Method:      method,
 		Path:        path,
 		Middlewares: handlers[:len(handlers)-1],
@@ -92,7 +92,7 @@ func RegisterRoute(method, path string, handlers ...gin.HandlerFunc) {
 }
 
 // RegisterRouteWithMeta registers a route with complete metadata
-func RegisterRouteWithMeta(entry RouteEntry) {
+func RegisterRouteWithMeta(entry *RouteEntry) {
 	if entry.Handler == nil {
 		log.Fatalf("RegisterRoute: handler is required for %s %s", entry.Method, entry.Path)
 	}
@@ -111,7 +111,7 @@ func RegisterRouteWithMeta(entry RouteEntry) {
 		entry.Tags = append(entry.Tags, entry.Group.Name)
 	}
 
-	routes = append(routes, entry)
+	routes = append(routes, *entry)
 	LogVerbose("Route registrada: %s %s -> %s", entry.Method, entry.Path, entry.FuncName)
 }
 
@@ -129,9 +129,12 @@ func Default() *gin.Engine {
 	r.GET("/decorators/swagger", SwaggerRedirectHandler)
 
 	// Register all framework routes
-	for _, route := range routes {
+	for i := range routes {
+		route := &routes[i]
 		// Combine middlewares + main handler
-		handlers := append(route.Middlewares, route.Handler)
+		handlers := make([]gin.HandlerFunc, 0, len(route.Middlewares)+1)
+		handlers = append(handlers, route.Middlewares...)
+		handlers = append(handlers, route.Handler)
 		r.Handle(route.Method, route.Path, handlers...)
 	}
 

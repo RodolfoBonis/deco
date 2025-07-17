@@ -31,7 +31,7 @@ func MinifyCode(inputPath, outputPath string, enabled bool) error {
 	}
 
 	// Escrever file minificado
-	if err := os.WriteFile(outputPath, []byte(minifiedContent), 0644); err != nil {
+	if err := os.WriteFile(outputPath, []byte(minifiedContent), 0o600); err != nil {
 		return fmt.Errorf("error ao escrever file minificado: %v", err)
 	}
 
@@ -207,7 +207,7 @@ func copyFile(src, dst string) error {
 		return err
 	}
 
-	return os.WriteFile(dst, input, 0644)
+	return os.WriteFile(dst, input, 0o600)
 }
 
 // GetMinifiedTemplate returns minified template for generation

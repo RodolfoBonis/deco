@@ -40,9 +40,9 @@ type TracingInfo struct {
 var defaultTelemetryManager *TelemetryManager
 
 // InitTelemetry initializes OpenTelemetry
-func InitTelemetry(config TelemetryConfig) (*TelemetryManager, error) {
+func InitTelemetry(config *TelemetryConfig) (*TelemetryManager, error) {
 	if !config.Enabled {
-		return &TelemetryManager{config: config}, nil
+		return &TelemetryManager{config: *config}, nil
 	}
 
 	// Configure resource
@@ -88,7 +88,7 @@ func InitTelemetry(config TelemetryConfig) (*TelemetryManager, error) {
 
 	manager := &TelemetryManager{
 		tracer:   tracer,
-		config:   config,
+		config:   *config,
 		provider: provider,
 	}
 
@@ -114,7 +114,7 @@ func TracingMiddleware(config *TelemetryConfig) gin.HandlerFunc {
 
 	// Initialize if necessary
 	if defaultTelemetryManager == nil {
-		manager, err := InitTelemetry(*config)
+		manager, err := InitTelemetry(config)
 		if err != nil {
 			// Log error and continue without tracing
 			fmt.Printf("Error ao inicializar telemetria: %v\n", err)
@@ -325,7 +325,7 @@ func TraceWebSocketOperation(ctx context.Context, operation, connectionID string
 }
 
 // GetTracingInfo returns information about tracing configuration
-func GetTracingInfo(config TelemetryConfig) TracingInfo {
+func GetTracingInfo(config *TelemetryConfig) TracingInfo {
 	info := TracingInfo{
 		Enabled:        config.Enabled,
 		ServiceName:    config.ServiceName,
@@ -366,7 +366,7 @@ func TracingStatsHandler() gin.HandlerFunc {
 }
 
 // createTelemetryMiddleware creates telemetry middleware (for markers.go)
-func createTelemetryMiddleware(args []string) gin.HandlerFunc {
+func createTelemetryMiddleware(_ []string) gin.HandlerFunc {
 	config := DefaultConfig().Telemetry
 	return TracingMiddleware(&config)
 }
@@ -379,7 +379,7 @@ func HealthCheckWithTracing() gin.HandlerFunc {
 
 		c.Request = c.Request.WithContext(ctx)
 
-		// Verify componentes
+		// Verify components
 		components := map[string]string{
 			"server": "healthy",
 		}

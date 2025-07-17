@@ -214,7 +214,7 @@ func ValidateQuery(target interface{}, config *ValidationConfig) gin.HandlerFunc
 }
 
 // ValidateParams middleware for path parameter validation
-func ValidateParams(rules map[string]string, config *ValidationConfig) gin.HandlerFunc {
+func ValidateParams(rules map[string]string, _ *ValidationConfig) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var validationErrors []ValidationField
 

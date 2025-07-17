@@ -353,7 +353,8 @@ func GenerateOpenAPISpec(config *Config) *OpenAPISpec {
 	}
 
 	// Process routes
-	for _, route := range routes {
+	for i := range routes {
+		route := &routes[i]
 		path := route.Path
 		if spec.Paths[path] == nil {
 			spec.Paths[path] = make(OpenAPIPath)
@@ -367,7 +368,7 @@ func GenerateOpenAPISpec(config *Config) *OpenAPISpec {
 }
 
 // convertRouteToOperation converts RouteEntry to OpenAPIOperation
-func convertRouteToOperation(route RouteEntry, components *OpenAPIComponents) *OpenAPIOperation {
+func convertRouteToOperation(route *RouteEntry, components *OpenAPIComponents) *OpenAPIOperation {
 	operation := &OpenAPIOperation{
 		Summary:     route.Summary,
 		Description: route.Description,
@@ -396,7 +397,7 @@ func convertRouteToOperation(route RouteEntry, components *OpenAPIComponents) *O
 
 	// Process non-body parameters
 	for _, param := range otherParams {
-		operation.Parameters = append(operation.Parameters, convertToOpenAPIParameter(param, components))
+		operation.Parameters = append(operation.Parameters, convertToOpenAPIParameter(&param, components))
 	}
 
 	// Process request body if there are body parameters
@@ -569,7 +570,7 @@ func findSchemaByPattern(pattern string) *SchemaInfo {
 }
 
 // convertToOpenAPIParameter converts ParameterInfo to OpenAPIParameter
-func convertToOpenAPIParameter(param ParameterInfo, _ *OpenAPIComponents) OpenAPIParameter {
+func convertToOpenAPIParameter(param *ParameterInfo, _ *OpenAPIComponents) OpenAPIParameter {
 	openAPIParam := OpenAPIParameter{
 		Name:        param.Name,
 		In:          param.Location,
@@ -642,7 +643,7 @@ func convertTypeToSchema(goType string) *OpenAPISchema {
 }
 
 // generateOperationID generates unique ID for the operation
-func generateOperationID(route RouteEntry) string {
+func generateOperationID(route *RouteEntry) string {
 	// Clean characters especiais do path
 	cleanPath := regexp.MustCompile(`[^a-zA-Z0-9]+`).ReplaceAllString(route.Path, "")
 
@@ -804,7 +805,7 @@ func OpenAPIYAMLHandler(config *Config) gin.HandlerFunc {
 }
 
 // SwaggerUIHandler serves Swagger UI interface for API documentation
-func SwaggerUIHandler(config *Config) gin.HandlerFunc {
+func SwaggerUIHandler(_ *Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// HTML template for Swagger UI
 		swaggerHTML := `<!DOCTYPE html>

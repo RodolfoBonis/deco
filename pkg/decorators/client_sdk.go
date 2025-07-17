@@ -14,7 +14,7 @@ import (
 
 // SDKGenerator interface for different SDK generators
 type SDKGenerator interface {
-	Generate(spec *OpenAPISpec, config ClientSDKConfig) error
+	Generate(spec *OpenAPISpec, config *ClientSDKConfig) error
 	GetLanguage() string
 	GetFileExtension() string
 }
@@ -38,10 +38,10 @@ type SDKManager struct {
 }
 
 // NewSDKManager creates new SDK manager
-func NewSDKManager(config ClientSDKConfig) *SDKManager {
+func NewSDKManager(config *ClientSDKConfig) *SDKManager {
 	manager := &SDKManager{
 		generators: make(map[string]SDKGenerator),
-		config:     config,
+		config:     *config,
 	}
 
 	// Register generatores
@@ -65,7 +65,7 @@ func (sm *SDKManager) GenerateSDKs(spec *OpenAPISpec) error {
 	}
 
 	// Create output directory
-	if err := os.MkdirAll(sm.config.OutputDir, 0755); err != nil {
+	if err := os.MkdirAll(sm.config.OutputDir, 0o755); err != nil {
 		return fmt.Errorf("error creating output directory: %v", err)
 	}
 
@@ -73,7 +73,7 @@ func (sm *SDKManager) GenerateSDKs(spec *OpenAPISpec) error {
 	for _, language := range sm.config.Languages {
 		if generator, exists := sm.generators[language]; exists {
 			fmt.Printf("Gerando SDK para %s...\n", language)
-			if err := generator.Generate(spec, sm.config); err != nil {
+			if err := generator.Generate(spec, &sm.config); err != nil {
 				return fmt.Errorf("error ao gerar SDK para %s: %v", language, err)
 			}
 		} else {
@@ -86,17 +86,20 @@ func (sm *SDKManager) GenerateSDKs(spec *OpenAPISpec) error {
 
 // Go SDK Generator
 
+// GetLanguage retorna a linguagem de programação usada.
 func (g *GoSDKGenerator) GetLanguage() string {
 	return "go"
 }
 
+// GetFileExtension retorna a extensão de arquivo para a linguagem.
 func (g *GoSDKGenerator) GetFileExtension() string {
 	return ".go"
 }
 
-func (g *GoSDKGenerator) Generate(spec *OpenAPISpec, config ClientSDKConfig) error {
+// Generate creates a Go client SDK from the OpenAPI specification
+func (g *GoSDKGenerator) Generate(spec *OpenAPISpec, config *ClientSDKConfig) error {
 	outputDir := filepath.Join(config.OutputDir, "go")
-	if err := os.MkdirAll(outputDir, 0755); err != nil {
+	if err := os.MkdirAll(outputDir, 0o755); err != nil {
 		return err
 	}
 
@@ -189,7 +192,7 @@ func (e Error) Error() string {
 	return g.executeTemplate(tmpl, data, filepath.Join(outputDir, "client.go"))
 }
 
-func (g *GoSDKGenerator) prepareTemplateData(spec *OpenAPISpec, config ClientSDKConfig) map[string]interface{} {
+func (g *GoSDKGenerator) prepareTemplateData(spec *OpenAPISpec, config *ClientSDKConfig) map[string]interface{} {
 	endpoints := make([]map[string]interface{}, 0)
 
 	for path, pathItem := range spec.Paths {
@@ -249,7 +252,7 @@ func (g *GoSDKGenerator) generateParametersSignature(params []OpenAPIParameter) 
 
 func (g *GoSDKGenerator) generateURLConstruction(path string, params []OpenAPIParameter) string {
 	// Replace path parameters and build query
-	code := fmt.Sprintf("url := c.BaseURL + \"%s\"", path)
+	code := fmt.Sprintf("url := c.BaseURL + %q", path)
 
 	// Replace path parameters
 	for _, param := range params {
@@ -269,7 +272,7 @@ func (g *GoSDKGenerator) generateURLConstruction(path string, params []OpenAPIPa
 	if len(queryParams) > 0 {
 		code += "\n\tvalues := url.Values{}\n"
 		for _, param := range queryParams {
-			code += fmt.Sprintf("\tvalues.Set(\"%s\", %s)\n", param, param)
+			code += fmt.Sprintf("\tvalues.Set(%q, %s)\n", param, param)
 		}
 		code += "\turl += \"?\" + values.Encode()"
 	}
@@ -356,17 +359,20 @@ func (g *GoSDKGenerator) executeTemplate(tmplStr string, data interface{}, outpu
 
 // Python SDK Generator
 
+// GetLanguage retorna a linguagem de programação usada.
 func (p *PythonSDKGenerator) GetLanguage() string {
 	return "python"
 }
 
+// GetFileExtension retorna a extensão de arquivo para a linguagem.
 func (p *PythonSDKGenerator) GetFileExtension() string {
 	return ".py"
 }
 
-func (p *PythonSDKGenerator) Generate(spec *OpenAPISpec, config ClientSDKConfig) error {
+// Generate creates a Python client SDK from the OpenAPI specification
+func (p *PythonSDKGenerator) Generate(spec *OpenAPISpec, config *ClientSDKConfig) error {
 	outputDir := filepath.Join(config.OutputDir, "python")
-	if err := os.MkdirAll(outputDir, 0755); err != nil {
+	if err := os.MkdirAll(outputDir, 0o755); err != nil {
 		return err
 	}
 
@@ -429,7 +435,7 @@ class APIError(Exception):
 	return p.executeTemplate(tmpl, data, filepath.Join(outputDir, "client.py"))
 }
 
-func (p *PythonSDKGenerator) prepareTemplateData(spec *OpenAPISpec, config ClientSDKConfig) map[string]interface{} {
+func (p *PythonSDKGenerator) prepareTemplateData(spec *OpenAPISpec, config *ClientSDKConfig) map[string]interface{} {
 	// Use cases.Title instead of deprecated strings.Title
 	caser := cases.Title(language.English)
 	className := caser.String(config.PackageName) + "Client"
@@ -562,17 +568,20 @@ func (p *PythonSDKGenerator) executeTemplate(tmplStr string, data interface{}, o
 
 // JavaScript SDK Generator
 
+// GetLanguage retorna a linguagem de programação usada.
 func (j *JavaScriptSDKGenerator) GetLanguage() string {
 	return "javascript"
 }
 
+// GetFileExtension retorna a extensão de arquivo para a linguagem.
 func (j *JavaScriptSDKGenerator) GetFileExtension() string {
 	return ".js"
 }
 
-func (j *JavaScriptSDKGenerator) Generate(spec *OpenAPISpec, config ClientSDKConfig) error {
+// Generate creates a JavaScript client SDK from the OpenAPI specification
+func (j *JavaScriptSDKGenerator) Generate(spec *OpenAPISpec, config *ClientSDKConfig) error {
 	outputDir := filepath.Join(config.OutputDir, "javascript")
-	if err := os.MkdirAll(outputDir, 0755); err != nil {
+	if err := os.MkdirAll(outputDir, 0o755); err != nil {
 		return err
 	}
 
@@ -628,7 +637,7 @@ module.exports = {{.ClassName}};
 	return j.executeTemplate(tmpl, data, filepath.Join(outputDir, "client.js"))
 }
 
-func (j *JavaScriptSDKGenerator) prepareTemplateData(spec *OpenAPISpec, config ClientSDKConfig) map[string]interface{} {
+func (j *JavaScriptSDKGenerator) prepareTemplateData(spec *OpenAPISpec, config *ClientSDKConfig) map[string]interface{} {
 	// Use cases.Title instead of deprecated strings.Title
 	caser := cases.Title(language.English)
 	className := caser.String(config.PackageName) + "Client"
@@ -734,17 +743,20 @@ func (j *JavaScriptSDKGenerator) executeTemplate(tmplStr string, data interface{
 
 // TypeScript SDK Generator
 
+// GetLanguage retorna a linguagem de programação usada.
 func (t *TypeScriptSDKGenerator) GetLanguage() string {
 	return "typescript"
 }
 
+// GetFileExtension retorna a extensão de arquivo para a linguagem.
 func (t *TypeScriptSDKGenerator) GetFileExtension() string {
 	return ".ts"
 }
 
-func (t *TypeScriptSDKGenerator) Generate(spec *OpenAPISpec, config ClientSDKConfig) error {
+// Generate creates a TypeScript client SDK from the OpenAPI specification
+func (t *TypeScriptSDKGenerator) Generate(spec *OpenAPISpec, config *ClientSDKConfig) error {
 	outputDir := filepath.Join(config.OutputDir, "typescript")
-	if err := os.MkdirAll(outputDir, 0755); err != nil {
+	if err := os.MkdirAll(outputDir, 0o755); err != nil {
 		return err
 	}
 
@@ -812,7 +824,7 @@ export class APIError extends Error {
 	return t.executeTemplate(tmpl, data, filepath.Join(outputDir, "client.ts"))
 }
 
-func (t *TypeScriptSDKGenerator) prepareTemplateData(spec *OpenAPISpec, config ClientSDKConfig) map[string]interface{} {
+func (t *TypeScriptSDKGenerator) prepareTemplateData(spec *OpenAPISpec, config *ClientSDKConfig) map[string]interface{} {
 	// Use cases.Title instead of deprecated strings.Title
 	caser := cases.Title(language.English)
 	className := caser.String(config.PackageName) + "Client"
@@ -933,8 +945,8 @@ func (t *TypeScriptSDKGenerator) executeTemplate(tmplStr string, data interface{
 	return tmpl.Execute(file, data)
 }
 
-// Public function to generate SDKs
-func GenerateClientSDKs(config ClientSDKConfig) error {
+// GenerateClientSDKs generates client SDKs for multiple languages
+func GenerateClientSDKs(config *ClientSDKConfig) error {
 	if !config.Enabled {
 		return nil
 	}

@@ -46,7 +46,7 @@ type MetricsCollector struct {
 var defaultMetricsCollector *MetricsCollector
 
 // InitMetrics initializes metrics system
-func InitMetrics(config MetricsConfig) *MetricsCollector {
+func InitMetrics(config *MetricsConfig) *MetricsCollector {
 	collector := &MetricsCollector{
 		// HTTP metrics
 		httpRequestsTotal: prometheus.NewCounterVec(
@@ -252,7 +252,7 @@ func MetricsMiddleware(config *MetricsConfig) gin.HandlerFunc {
 
 	// Initialize coletor se not existir
 	if defaultMetricsCollector == nil {
-		InitMetrics(*config)
+		InitMetrics(config)
 	}
 
 	return func(c *gin.Context) {
@@ -427,7 +427,7 @@ func HealthCheckHandler() gin.HandlerFunc {
 }
 
 // createMetricsMiddleware creates metrics middleware (for markers.go)
-func createMetricsMiddleware(args []string) gin.HandlerFunc {
+func createMetricsMiddleware(_ []string) gin.HandlerFunc {
 	config := DefaultConfig().Metrics
 	return MetricsMiddleware(&config)
 }
@@ -442,7 +442,7 @@ type MetricsInfo struct {
 }
 
 // GetMetricsInfo returns information about metrics
-func GetMetricsInfo(config MetricsConfig) MetricsInfo {
+func GetMetricsInfo(config *MetricsConfig) MetricsInfo {
 	metrics := []string{
 		"http_requests_total",
 		"http_request_duration_seconds",
