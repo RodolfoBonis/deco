@@ -589,3 +589,15 @@ func WebSocketStatsHandler() gin.HandlerFunc {
 		})
 	}
 }
+
+// WebSocketHandlerWrapper converts WebSocketHandler to gin.HandlerFunc for documentation
+func WebSocketHandlerWrapper(handler WebSocketHandler) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// This is just a wrapper for documentation purposes
+		// The actual WebSocket handling is done by the WebSocket system
+		c.JSON(200, gin.H{
+			"message": "WebSocket handler - use WebSocket connection to interact",
+			"type":    "websocket_handler",
+		})
+	}
+}

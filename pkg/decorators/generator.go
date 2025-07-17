@@ -277,7 +277,7 @@ func init() {
 	deco.RegisterRouteWithMeta(deco.RouteEntry{
 		Method:      "WS",
 		Path:        "/ws/{{ .FuncName }}",
-		Handler:     {{ if eq $.PackageName "deco" }}handlers.{{ .FuncName }}{{ else }}{{ .FuncName }}{{ end }},
+		Handler:     deco.WebSocketHandlerWrapper({{ if eq $.PackageName "deco" }}handlers.{{ .FuncName }}{{ else }}{{ .FuncName }}{{ end }}),
 		FuncName:    "{{ .FuncName }}",
 		PackageName: "{{ .PackageName }}",
 		{{- if .Description }}
