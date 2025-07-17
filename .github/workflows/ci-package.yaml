@@ -148,9 +148,17 @@ jobs:
         run: go mod download
 
       - name: Run tests with coverage
+        shell: bash
         run: |
-          go test -v -race -coverprofile=coverage.out ./...
-          go tool cover -html=coverage.out -o coverage.html
+          # Run tests with coverage
+          go test -v -race -coverprofile=coverage.out ./... || exit 1
+          
+          # Generate HTML coverage report if coverage.out exists
+          if [ -f coverage.out ]; then
+            go tool cover -html=coverage.out -o coverage.html || echo "Coverage HTML generation failed, but tests passed"
+          else
+            echo "No coverage.out file generated"
+          fi
 
       - name: Upload coverage artifacts
         if: matrix.os == 'ubuntu-latest'
