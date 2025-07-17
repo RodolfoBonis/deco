@@ -35,6 +35,7 @@ var (
 	RegisterWebSocketHandler         = decorators.RegisterWebSocketHandler
 	RegisterDefaultWebSocketHandlers = decorators.RegisterDefaultWebSocketHandlers
 	GetWebSocketHub                  = decorators.GetWebSocketHub
+	WebSocketHandlerWrapper          = decorators.WebSocketHandlerWrapper
 )
 
 // Re-exportar tipos principais
