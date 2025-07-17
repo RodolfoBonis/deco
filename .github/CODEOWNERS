@@ -1,0 +1,32 @@
+# CODEOWNERS
+# Este arquivo define quem é responsável por diferentes partes do código
+# Cada linha é um padrão de arquivo seguido de um ou mais proprietários
+
+# O proprietário principal de todo o repositório
+* @RodolfoBonis
+
+# Arquivos específicos de configuração do projeto
+/.github/ @RodolfoBonis
+/go.mod @RodolfoBonis
+/go.sum @RodolfoBonis
+/Makefile @RodolfoBonis
+/README.md @RodolfoBonis
+/LICENSE @RodolfoBonis
+
+# Documentação
+/docs/ @RodolfoBonis
+/*.md @RodolfoBonis
+
+# Código fonte principal
+/pkg/ @RodolfoBonis
+/cmd/ @RodolfoBonis
+
+# Exemplos
+/examples/ @RodolfoBonis
+
+# Templates
+/templates/ @RodolfoBonis
+
+# Configurações e scripts
+/.config/ @RodolfoBonis
+/scripts/ @RodolfoBonis 
