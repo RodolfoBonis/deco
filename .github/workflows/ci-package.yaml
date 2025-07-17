@@ -294,10 +294,11 @@ jobs:
     name: Notify Success
     runs-on: ubuntu-latest
     needs: [lint_go, test, check_vulnerabilities, build]
-    if: always() && ${{ needs.lint_go.result == 'success' && needs.test.result == 'success' && needs.check_vulnerabilities.result == 'success' && needs.build.result == 'success' }}
+    if: always()
     steps:
       - name: Generate success message
         id: generate_success_message
+        if: ${{ needs.lint_go.result == 'success' && needs.test.result == 'success' && needs.check_vulnerabilities.result == 'success' && needs.build.result == 'success' }}
         shell: bash
         run: |
           # Verifica se o script existe e dá permissão de execução
@@ -334,6 +335,7 @@ jobs:
 
       - name: Send Telegram notification on success
         uses: an3park/telegram-action@v1
+        if: ${{ needs.lint_go.result == 'success' && needs.test.result == 'success' && needs.check_vulnerabilities.result == 'success' && needs.build.result == 'success' }}
         with:
           chat_id: ${{ secrets.CHAT_ID }}
           bot_token: ${{ secrets.BOTTOKEN }}
@@ -344,10 +346,11 @@ jobs:
     name: Notify Failure
     runs-on: ubuntu-latest
     needs: [lint_go, test, check_vulnerabilities, build]
-    if: always() && ${{ needs.lint_go.result != 'success' || needs.test.result != 'success' || needs.check_vulnerabilities.result != 'success' || needs.build.result != 'success' }}
+    if: always()
     steps:
       - name: Generate failure message
         id: generate_error_message
+        if: ${{ needs.lint_go.result != 'success' || needs.test.result != 'success' || needs.check_vulnerabilities.result != 'success' || needs.build.result != 'success' }}
         shell: bash
         run: |
           # Verifica se o script existe e dá permissão de execução
@@ -391,6 +394,7 @@ jobs:
 
       - name: Send Telegram notification on failure
         uses: an3park/telegram-action@v1
+        if: ${{ needs.lint_go.result != 'success' || needs.test.result != 'success' || needs.check_vulnerabilities.result != 'success' || needs.build.result != 'success' }}
         with:
           chat_id: ${{ secrets.CHAT_ID }}
           bot_token: ${{ secrets.BOTTOKEN }}
