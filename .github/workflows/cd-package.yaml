@@ -12,6 +12,8 @@ env:
   GO_VERSION: '1.23'
   PACKAGE_NAME: 'deco'
   REPOSITORY_OWNER: ${{ github.repository_owner }}
+  VERSION: ''
+  BINARY_NAME: ''
 
 jobs:
   get_commit_messages:

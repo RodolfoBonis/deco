@@ -274,7 +274,7 @@ func SaveConfig(config *Config, configPath string) error {
 		return fmt.Errorf("error serializing configuration: %v", err)
 	}
 
-	if err := os.WriteFile(configPath, data, 0644); err != nil {
+	if err := os.WriteFile(configPath, data, 0o600); err != nil {
 		return fmt.Errorf("error saving configuration: %v", err)
 	}
 

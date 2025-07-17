@@ -187,15 +187,16 @@ func getModuleName(dir string) string {
 			if err != nil {
 				return ""
 			}
-			defer file.Close()
 
 			scanner := bufio.NewScanner(file)
 			for scanner.Scan() {
 				line := strings.TrimSpace(scanner.Text())
 				if strings.HasPrefix(line, "module ") {
+					file.Close()
 					return strings.TrimSpace(strings.TrimPrefix(line, "module"))
 				}
 			}
+			file.Close()
 			return ""
 		}
 

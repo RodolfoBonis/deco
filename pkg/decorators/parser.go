@@ -377,7 +377,7 @@ func (e *MultipleValidationError) Error() string {
 	return strings.Join(messages, "\n")
 }
 
-// parseArguments converte string de argumentos em slice
+// parseArguments converts string of arguments to slice
 func parseArguments(argsStr string) []string {
 	if argsStr == "" {
 		return nil
@@ -511,7 +511,7 @@ func processMiddlewares(route *RouteMeta) error {
 	return nil
 }
 
-// parseArgsToMap converte argumentos em map[string]interface{}
+// parseArgsToMap converts arguments to map[string]interface{}
 func parseArgsToMap(args []string) map[string]interface{} {
 	result := make(map[string]interface{})
 

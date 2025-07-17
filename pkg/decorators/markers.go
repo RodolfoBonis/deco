@@ -391,7 +391,7 @@ func createValidateQueryMiddleware(args []string) gin.HandlerFunc {
 func createValidateParamsMiddleware(args []string) gin.HandlerFunc {
 	config := DefaultConfig().Validation
 
-	// Extract regras dos argumentos
+	// Extract rules from arguments
 	rules := make(map[string]string)
 	for _, arg := range args {
 		if strings.Contains(arg, "=") {

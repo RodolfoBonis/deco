@@ -179,7 +179,7 @@ func convertEntityToSchema(entity *EntityMeta) *SchemaInfo {
 
 	for _, field := range entity.Fields {
 		propInfo := &PropertyInfo{
-			Name:        getFieldNameForJSON(field),
+			Name:        getFieldNameForJSON(&field),
 			Type:        mapGoTypeToOpenAPIType(field.Type),
 			Description: field.Description,
 		}
@@ -225,7 +225,7 @@ func convertEntityToSchema(entity *EntityMeta) *SchemaInfo {
 }
 
 // getFieldNameForJSON returns the field name to use in JSON (considers json tag)
-func getFieldNameForJSON(field FieldMeta) string {
+func getFieldNameForJSON(field *FieldMeta) string {
 	if field.JsonTag != "" && field.JsonTag != "-" {
 		return field.JsonTag
 	}
@@ -319,8 +319,8 @@ func extractValidationConstraints(validation string, prop *PropertyInfo) {
 				case "string":
 					prop.MinLength = &val
 				case "integer", "number":
-					min := float64(val)
-					prop.Minimum = &min
+					minVal := float64(val)
+					prop.Minimum = &minVal
 				}
 			}
 		}
@@ -333,8 +333,8 @@ func extractValidationConstraints(validation string, prop *PropertyInfo) {
 				case "string":
 					prop.MaxLength = &val
 				case "integer", "number":
-					max := float64(val)
-					prop.Maximum = &max
+					maxVal := float64(val)
+					prop.Maximum = &maxVal
 				}
 			}
 		}

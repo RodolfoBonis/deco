@@ -26,6 +26,7 @@ permissions:
 
 env:
   GO_VERSION: '1.23'
+  PR_URL: ''
 
 jobs:
   lint_go:

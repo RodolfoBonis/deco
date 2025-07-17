@@ -2,7 +2,7 @@ package decorators
 
 import (
 	"context"
-	"crypto/md5"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -504,7 +504,7 @@ func ParseCacheArgs(args []string) (time.Duration, string, CacheKeyFunc) {
 
 // generateCacheKeyHash generates MD5 hash of the key for headers
 func generateCacheKeyHash(key string) string {
-	hash := md5.Sum([]byte(key))
+	hash := sha256.Sum256([]byte(key))
 	return fmt.Sprintf("%x", hash)[:8] // First 8 characters
 }
 

@@ -90,7 +90,7 @@ func GenerateInitFileWithConfig(rootDir, outputPath, pkgName string, config *Con
 
 	// Create output directory if necessary
 	outputDir := filepath.Dir(outputPath)
-	if err := os.MkdirAll(outputDir, 0755); err != nil {
+	if err := os.MkdirAll(outputDir, 0o755); err != nil {
 		return fmt.Errorf("error creating output directory: %v", err)
 	}
 
@@ -106,7 +106,7 @@ func GenerateInitFileWithConfig(rootDir, outputPath, pkgName string, config *Con
 *.tmp
 *.cache
 `
-			if err := os.WriteFile(gitignorePath, []byte(gitignoreContent), 0644); err != nil {
+			if err := os.WriteFile(gitignorePath, []byte(gitignoreContent), 0o600); err != nil {
 				fmt.Printf("⚠️  Warning: could not criar .gitignore em %s: %v\n", outputDir, err)
 			} else {
 				fmt.Printf("📝 Created .gitignore em %s\n", outputDir)
@@ -191,7 +191,7 @@ func init() {
 	{{- if .Description }}
 	// {{ .Description }}
 	{{- end }}
-	deco.RegisterRouteWithMeta(deco.RouteEntry{
+	decorators.RegisterRouteWithMeta(&decorators.RouteEntry{
 		Method:      "{{ .Method }}",
 		Path:        "{{ .Path }}",
 		Handler:     {{ if eq $.PackageName "deco" }}handlers.{{ .FuncName }}{{ else }}{{ .FuncName }}{{ end }},
@@ -218,7 +218,7 @@ func init() {
 		},
 		{{- end }}
 		{{- if .MiddlewareInfo }}
-		MiddlewareInfo: []deco.MiddlewareInfo{
+		MiddlewareInfo: []decorators.MiddlewareInfo{
 			{{- range .MiddlewareInfo }}
 			{
 				Name:        {{ escapeString .Name }},
@@ -233,7 +233,7 @@ func init() {
 		},
 		{{- end }}
 		{{- if .Parameters }}
-		Parameters: []deco.ParameterInfo{
+		Parameters: []decorators.ParameterInfo{
 			{{- range .Parameters }}
 			{
 				Name:        {{ escapeString .Name }},
@@ -247,7 +247,7 @@ func init() {
 		},
 		{{- end }}
 		{{- if .Group }}
-		Group: &deco.GroupInfo{
+		Group: &decorators.GroupInfo{
 			Name:        {{ escapeString .Group.Name }},
 			Prefix:      {{ escapeString .Group.Prefix }},
 			Description: {{ escapeString .Group.Description }},
@@ -270,14 +270,14 @@ func init() {
 	// WebSocket-only handlers for {{ .FuncName }}
 	{{- $funcName := .FuncName }}
 	{{- range .WebSocketHandlers }}
-	deco.RegisterWebSocketHandler("{{ . }}", {{ if eq $.PackageName "deco" }}handlers.{{ $funcName }}{{ else }}{{ $funcName }}{{ end }})
+	decorators.RegisterWebSocketHandler("{{ . }}", {{ if eq $.PackageName "deco" }}handlers.{{ $funcName }}{{ else }}{{ $funcName }}{{ end }})
 	{{- end }}
 	
 	// Register WebSocket handlers as routes for documentation
-	deco.RegisterRouteWithMeta(deco.RouteEntry{
+	decorators.RegisterRouteWithMeta(&decorators.RouteEntry{
 		Method:      "WS",
 		Path:        "/ws/{{ .FuncName }}",
-		Handler:     deco.WebSocketHandlerWrapper({{ if eq $.PackageName "deco" }}handlers.{{ .FuncName }}{{ else }}{{ .FuncName }}{{ end }}),
+		Handler:     decorators.WebSocketHandlerWrapper({{ if eq $.PackageName "deco" }}handlers.{{ .FuncName }}{{ else }}{{ .FuncName }}{{ end }}),
 		FuncName:    "{{ .FuncName }}",
 		PackageName: "{{ .PackageName }}",
 		{{- if .Description }}
@@ -294,7 +294,7 @@ func init() {
 		},
 		{{- end }}
 		{{- if .MiddlewareInfo }}
-		MiddlewareInfo: []deco.MiddlewareInfo{
+		MiddlewareInfo: []decorators.MiddlewareInfo{
 			{{- range .MiddlewareInfo }}
 			{
 				Name:        {{ escapeString .Name }},
@@ -309,7 +309,7 @@ func init() {
 		},
 		{{- end }}
 		{{- if .Group }}
-		Group: &deco.GroupInfo{
+		Group: &decorators.GroupInfo{
 			Name:        {{ escapeString .Group.Name }},
 			Prefix:      {{ escapeString .Group.Prefix }},
 			Description: {{ escapeString .Group.Description }},
@@ -325,7 +325,7 @@ func init() {
 {{- end }}
 
 	// Initialize WebSocket default handlers
-	deco.RegisterDefaultWebSocketHandlers()
+	decorators.RegisterDefaultWebSocketHandlers()
 }
 
 // Metadata generated automatically
