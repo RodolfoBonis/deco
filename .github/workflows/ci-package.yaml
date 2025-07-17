@@ -285,7 +285,7 @@ jobs:
     name: Notify Success
     runs-on: ubuntu-latest
     needs: [lint_go, test, check_vulnerabilities, build]
-    if: ${{ needs.lint_go.result == 'success' && needs.test.result == 'success' && needs.check_vulnerabilities.result == 'success' && needs.build.result == 'success' }}
+    if: always() && ${{ needs.lint_go.result == 'success' && needs.test.result == 'success' && needs.check_vulnerabilities.result == 'success' && needs.build.result == 'success' }}
     steps:
       - name: Generate success message
         id: generate_success_message
@@ -307,7 +307,6 @@ jobs:
           echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Send Telegram notification on success
-        if: ${{ needs.lint_go.result == 'success' && needs.test.result == 'success' && needs.check_vulnerabilities.result == 'success' && needs.build.result == 'success' }}
         uses: an3park/telegram-action@v1
         with:
           chat_id: ${{ secrets.CHAT_ID }}
@@ -319,7 +318,7 @@ jobs:
     name: Notify Failure
     runs-on: ubuntu-latest
     needs: [lint_go, test, check_vulnerabilities, build]
-    if: ${{ needs.lint_go.result != 'success' || needs.test.result != 'success' || needs.check_vulnerabilities.result != 'success' || needs.build.result != 'success' }}
+    if: always() && ${{ needs.lint_go.result != 'success' || needs.test.result != 'success' || needs.check_vulnerabilities.result != 'success' || needs.build.result != 'success' }}
     steps:
       - name: Generate failure message
         id: generate_error_message
@@ -337,6 +336,10 @@ jobs:
           echo '⚠️ [Check GitHub Actions Logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})' >> telegram_message_error.txt
           echo '' >> telegram_message_error.txt
           echo '🔍 **Failure Summary:**' >> telegram_message_error.txt
+          echo '- Lint Status: ${{ needs.lint_go.result }}' >> telegram_message_error.txt
+          echo '- Test Status: ${{ needs.test.result }}' >> telegram_message_error.txt
+          echo '- Security Status: ${{ needs.check_vulnerabilities.result }}' >> telegram_message_error.txt
+          echo '- Build Status: ${{ needs.build.result }}' >> telegram_message_error.txt
           
           MESSAGE=$(cat telegram_message_error.txt)
           echo "message<<EOF" >> $GITHUB_OUTPUT
@@ -344,7 +347,6 @@ jobs:
           echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Send Telegram notification on failure
-        if: ${{ needs.lint_go.result != 'success' || needs.test.result != 'success' || needs.check_vulnerabilities.result != 'success' || needs.build.result != 'success' }}
         uses: an3park/telegram-action@v1
         with:
           chat_id: ${{ secrets.CHAT_ID }}
