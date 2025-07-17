@@ -150,7 +150,7 @@ func detectHandlersDirectory() string {
 
 	// Try to search recursively in current directory
 	var foundDir string
-	filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
+	if err := filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return nil
 		}
@@ -163,7 +163,9 @@ func detectHandlersDirectory() string {
 		}
 
 		return nil
-	})
+	}); err != nil {
+		LogSilent("gin-decorators: Error walking directory: %v", err)
+	}
 
 	if foundDir != "" {
 		absPath, _ := filepath.Abs(foundDir)

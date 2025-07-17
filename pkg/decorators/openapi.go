@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 // OpenAPISpec complete OpenAPI 3.0 specification structure
@@ -692,8 +694,9 @@ func generateOperationID(route RouteEntry) string {
 	// Clean characters especiais do path
 	cleanPath := regexp.MustCompile(`[^a-zA-Z0-9]+`).ReplaceAllString(route.Path, "")
 
-	// Combine method, clean path and function
-	operationID := strings.ToLower(route.Method) + strings.Title(cleanPath)
+	// Use cases.Title instead of deprecated strings.Title
+	caser := cases.Title(language.English)
+	operationID := strings.ToLower(route.Method) + caser.String(cleanPath)
 
 	if route.FuncName != "" {
 		operationID = route.FuncName

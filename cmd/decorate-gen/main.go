@@ -102,7 +102,10 @@ func handleInitCommand(verbose bool) error {
 		fmt.Print("Do you want to overwrite? (y/N): ")
 
 		var response string
-		fmt.Scanln(&response)
+		if _, err := fmt.Scanln(&response); err != nil {
+			fmt.Printf("Error reading input: %v\n", err)
+			return nil
+		}
 
 		if response != "y" && response != "Y" && response != "yes" {
 			fmt.Println("❌ Operation cancelled.")
@@ -826,11 +829,12 @@ func (ds *DevServer) startServer() error {
 
 	// Goroutine to monitor the process
 	go func() {
-		cmd.Wait()
-		if ds.isRunning {
-			// Process died unexpectedly
-			fmt.Println("⚠️  Server stopped unexpectedly")
-			ds.isRunning = false
+		if err := cmd.Wait(); err != nil {
+			if ds.isRunning {
+				// Process died unexpectedly
+				fmt.Printf("⚠️  Server stopped unexpectedly: %v\n", err)
+				ds.isRunning = false
+			}
 		}
 	}()
 
@@ -882,7 +886,11 @@ func (ds *DevServer) stopServer() error {
 			if ds.Verbose {
 				fmt.Printf("⚠️  SIGTERM failed: %v, using SIGKILL...\n", err)
 			}
-			ds.serverCmd.Process.Kill()
+			if err := ds.serverCmd.Process.Kill(); err != nil {
+				if ds.Verbose {
+					fmt.Printf("⚠️  SIGKILL failed: %v\n", err)
+				}
+			}
 		}
 	}
 
@@ -902,7 +910,11 @@ func (ds *DevServer) stopServer() error {
 		if ds.Verbose {
 			fmt.Printf("⏰ Timeout waiting, forcing kill (PID: %d)...\n", pid)
 		}
-		ds.serverCmd.Process.Kill()
+		if err := ds.serverCmd.Process.Kill(); err != nil {
+			if ds.Verbose {
+				fmt.Printf("⚠️  Force kill failed: %v\n", err)
+			}
+		}
 		<-done // Wait for Kill to finish
 		return nil
 	}

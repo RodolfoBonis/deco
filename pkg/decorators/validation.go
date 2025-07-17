@@ -2,6 +2,7 @@ package decorators
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"reflect"
 	"strconv"
@@ -20,10 +21,18 @@ func init() {
 	validate = validator.New()
 
 	// Register custom validators
-	validate.RegisterValidation("phone", validatePhone)
-	validate.RegisterValidation("cpf", validateCPF)
-	validate.RegisterValidation("cnpj", validateCNPJ)
-	validate.RegisterValidation("datetime", validateDateTime)
+	if err := validate.RegisterValidation("phone", validatePhone); err != nil {
+		log.Printf("Failed to register phone validation: %v", err)
+	}
+	if err := validate.RegisterValidation("cpf", validateCPF); err != nil {
+		log.Printf("Failed to register CPF validation: %v", err)
+	}
+	if err := validate.RegisterValidation("cnpj", validateCNPJ); err != nil {
+		log.Printf("Failed to register CNPJ validation: %v", err)
+	}
+	if err := validate.RegisterValidation("datetime", validateDateTime); err != nil {
+		log.Printf("Failed to register datetime validation: %v", err)
+	}
 }
 
 // ValidationResponse validation error response
@@ -227,7 +236,7 @@ func ValidateParams(rules map[string]string, config *ValidationConfig) gin.Handl
 					Field:   param,
 					Value:   value,
 					Tag:     rule,
-					Message: fmt.Sprintf("Parameter .* does not meet rule '%s'", param, rule),
+					Message: fmt.Sprintf("Parameter '%s' does not meet rule '%s'", param, rule),
 				})
 			}
 		}
@@ -280,7 +289,7 @@ func getValidationMessage(fieldErr validator.FieldError, config *ValidationConfi
 		return fmt.Sprintf("Campo '%s' %s", field, message)
 	}
 
-	return fmt.Sprintf("Field .* is invalid (%s)", field, tag)
+	return fmt.Sprintf("Field '%s' is invalid (%s)", field, tag)
 }
 
 // validateParamValue validates parameter value based on rule

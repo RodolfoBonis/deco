@@ -360,9 +360,13 @@ func (c *WebSocketConnection) readPump() {
 
 	// Configure timeouts
 	pongTimeout, _ := time.ParseDuration(c.Hub.config.PongTimeout)
-	c.Conn.SetReadDeadline(time.Now().Add(pongTimeout))
+	if err := c.Conn.SetReadDeadline(time.Now().Add(pongTimeout)); err != nil {
+		log.Printf("WebSocket: Error setting read deadline: %v", err)
+	}
 	c.Conn.SetPongHandler(func(string) error {
-		c.Conn.SetReadDeadline(time.Now().Add(pongTimeout))
+		if err := c.Conn.SetReadDeadline(time.Now().Add(pongTimeout)); err != nil {
+			log.Printf("WebSocket: Error setting read deadline in pong handler: %v", err)
+		}
 		return nil
 	})
 
@@ -404,9 +408,13 @@ func (c *WebSocketConnection) writePump() {
 	for {
 		select {
 		case message, ok := <-c.Send:
-			c.Conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
+			if err := c.Conn.SetWriteDeadline(time.Now().Add(10 * time.Second)); err != nil {
+				log.Printf("WebSocket: Error setting write deadline: %v", err)
+			}
 			if !ok {
-				c.Conn.WriteMessage(websocket.CloseMessage, []byte{})
+				if err := c.Conn.WriteMessage(websocket.CloseMessage, []byte{}); err != nil {
+					log.Printf("WebSocket: Error writing close message: %v", err)
+				}
 				return
 			}
 
@@ -418,7 +426,9 @@ func (c *WebSocketConnection) writePump() {
 			}
 
 		case <-ticker.C:
-			c.Conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
+			if err := c.Conn.SetWriteDeadline(time.Now().Add(10 * time.Second)); err != nil {
+				log.Printf("WebSocket: Error setting write deadline for ping: %v", err)
+			}
 			c.mu.Lock()
 			err := c.Conn.WriteMessage(websocket.PingMessage, nil)
 			c.mu.Unlock()

@@ -7,6 +7,9 @@ import (
 	"strings"
 	"text/template"
 	"time"
+
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 // SDKGenerator interface for different SDK generators
@@ -221,11 +224,14 @@ func (g *GoSDKGenerator) generateFunctionName(method, path string) string {
 	// Convert method and path to function name
 	parts := strings.Split(strings.Trim(path, "/"), "/")
 	var name strings.Builder
-	name.WriteString(strings.Title(strings.ToLower(method)))
+
+	// Use cases.Title instead of deprecated strings.Title
+	caser := cases.Title(language.English)
+	name.WriteString(caser.String(strings.ToLower(method)))
 
 	for _, part := range parts {
 		if !strings.HasPrefix(part, "{") {
-			name.WriteString(strings.Title(part))
+			name.WriteString(caser.String(part))
 		}
 	}
 
@@ -424,7 +430,9 @@ class APIError(Exception):
 }
 
 func (p *PythonSDKGenerator) prepareTemplateData(spec *OpenAPISpec, config ClientSDKConfig) map[string]interface{} {
-	className := strings.Title(config.PackageName) + "Client"
+	// Use cases.Title instead of deprecated strings.Title
+	caser := cases.Title(language.English)
+	className := caser.String(config.PackageName) + "Client"
 	endpoints := make([]map[string]interface{}, 0)
 
 	for path, pathItem := range spec.Paths {
@@ -621,7 +629,9 @@ module.exports = {{.ClassName}};
 }
 
 func (j *JavaScriptSDKGenerator) prepareTemplateData(spec *OpenAPISpec, config ClientSDKConfig) map[string]interface{} {
-	className := strings.Title(config.PackageName) + "Client"
+	// Use cases.Title instead of deprecated strings.Title
+	caser := cases.Title(language.English)
+	className := caser.String(config.PackageName) + "Client"
 	endpoints := make([]map[string]interface{}, 0)
 
 	for path, pathItem := range spec.Paths {
@@ -652,9 +662,11 @@ func (j *JavaScriptSDKGenerator) generateFunctionName(method, path string) strin
 	var name strings.Builder
 	name.WriteString(strings.ToLower(method))
 
+	// Use cases.Title instead of deprecated strings.Title
+	caser := cases.Title(language.English)
 	for _, part := range parts {
 		if !strings.HasPrefix(part, "{") {
-			name.WriteString(strings.Title(part))
+			name.WriteString(caser.String(part))
 		}
 	}
 
@@ -801,7 +813,9 @@ export class APIError extends Error {
 }
 
 func (t *TypeScriptSDKGenerator) prepareTemplateData(spec *OpenAPISpec, config ClientSDKConfig) map[string]interface{} {
-	className := strings.Title(config.PackageName) + "Client"
+	// Use cases.Title instead of deprecated strings.Title
+	caser := cases.Title(language.English)
+	className := caser.String(config.PackageName) + "Client"
 	endpoints := make([]map[string]interface{}, 0)
 
 	for path, pathItem := range spec.Paths {
@@ -832,9 +846,11 @@ func (t *TypeScriptSDKGenerator) generateFunctionName(method, path string) strin
 	var name strings.Builder
 	name.WriteString(strings.ToLower(method))
 
+	// Use cases.Title instead of deprecated strings.Title
+	caser := cases.Title(language.English)
 	for _, part := range parts {
 		if !strings.HasPrefix(part, "{") {
-			name.WriteString(strings.Title(part))
+			name.WriteString(caser.String(part))
 		}
 	}
 

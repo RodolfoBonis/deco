@@ -5,6 +5,7 @@ import (
 	"crypto/md5"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -403,7 +404,10 @@ func CacheMiddleware(config *CacheConfig, keyGen CacheKeyFunc) gin.HandlerFunc {
 				Status:  writer.status,
 			}
 
-			store.Set(ctx, key, entry, defaultTTL)
+			if err := store.Set(ctx, key, entry, defaultTTL); err != nil {
+				// Log error but don't fail the request
+				log.Printf("Failed to store cache entry: %v", err)
+			}
 		}
 	}
 }
