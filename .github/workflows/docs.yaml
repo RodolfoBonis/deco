@@ -57,10 +57,9 @@ jobs:
 
       - name: Copy documentation images
         run: |
-          # Copia a imagem do Go Gopher se existir
+          # Verifica se a imagem do Go Gopher existe
           if [ -f "docs/images/deco_gopher.png" ]; then
-            cp docs/images/deco_gopher.png docs/images/
-            echo "✅ Image copied successfully"
+            echo "✅ Image found and ready for use"
           else
             echo "⚠️ Image not found, using placeholder"
             # Cria um placeholder se a imagem não existir
