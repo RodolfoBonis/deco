@@ -298,7 +298,10 @@ jobs:
     steps:
       - name: Generate success message
         id: generate_success_message
+        shell: bash
         run: |
+          chmod +x .config/scripts/escape_telegram_message.sh
+          
           echo '✅ **CI Pipeline Successful!**' > telegram_message_success.txt
           echo '' >> telegram_message_success.txt
           echo '📋 **Build Details:**' >> telegram_message_success.txt
@@ -311,8 +314,9 @@ jobs:
           echo '✨ All tests passed, code linted successfully, and no vulnerabilities found!' >> telegram_message_success.txt
           
           MESSAGE=$(cat telegram_message_success.txt)
+          ESCAPED_MESSAGE=$(.config/scripts/escape_telegram_message.sh "$MESSAGE")
           echo "message<<EOF" >> $GITHUB_OUTPUT
-          echo "$MESSAGE" >> $GITHUB_OUTPUT
+          echo "$ESCAPED_MESSAGE" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Send Telegram notification on success
@@ -331,7 +335,10 @@ jobs:
     steps:
       - name: Generate failure message
         id: generate_error_message
+        shell: bash
         run: |
+          chmod +x .config/scripts/escape_telegram_message.sh
+          
           echo '❌ **CI Pipeline Failed!**' > telegram_message_error.txt
           echo '' >> telegram_message_error.txt
           echo '📋 **Build Details:**' >> telegram_message_error.txt
@@ -351,8 +358,9 @@ jobs:
           echo '- Build Status: ${{ needs.build.result }}' >> telegram_message_error.txt
           
           MESSAGE=$(cat telegram_message_error.txt)
+          ESCAPED_MESSAGE=$(.config/scripts/escape_telegram_message.sh "$MESSAGE")
           echo "message<<EOF" >> $GITHUB_OUTPUT
-          echo "$MESSAGE" >> $GITHUB_OUTPUT
+          echo "$ESCAPED_MESSAGE" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Send Telegram notification on failure

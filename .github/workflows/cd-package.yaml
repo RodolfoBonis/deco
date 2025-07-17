@@ -135,6 +135,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
 
       - name: Set binary name based on OS
+        shell: bash
         run: |
           if [ "$RUNNER_OS" = "Windows" ]; then
             echo "BINARY_NAME=deco.exe" >> $GITHUB_ENV
@@ -156,6 +157,7 @@ jobs:
         run: mkdir -p release-assets
 
       - name: Archive binary
+        shell: bash
         run: |
           if [ "$RUNNER_OS" = "Windows" ]; then
             7z a release-assets/deco-${{ env.VERSION }}-${{ runner.os }}-${{ runner.arch }}.zip ${{ env.BINARY_NAME }}
@@ -297,7 +299,10 @@ jobs:
     steps:
       - name: Generate success message
         id: generate_success_message
+        shell: bash
         run: |
+          chmod +x .config/scripts/escape_telegram_message.sh
+          
           echo '✅ **Package Release Successful!**' > telegram_message_success.txt
           echo '' >> telegram_message_success.txt
           echo '📦 **${{ env.PACKAGE_NAME }}** has been released!' >> telegram_message_success.txt
@@ -308,8 +313,9 @@ jobs:
           echo '✨ Package published to Go Proxy and GitHub Releases!' >> telegram_message_success.txt
           
           MESSAGE=$(cat telegram_message_success.txt)
+          ESCAPED_MESSAGE=$(.config/scripts/escape_telegram_message.sh "$MESSAGE")
           echo "message<<EOF" >> $GITHUB_OUTPUT
-          echo "$MESSAGE" >> $GITHUB_OUTPUT
+          echo "$ESCAPED_MESSAGE" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Send Telegram notification on success
@@ -328,7 +334,10 @@ jobs:
     steps:
       - name: Generate failure message
         id: generate_error_message
+        shell: bash
         run: |
+          chmod +x .config/scripts/escape_telegram_message.sh
+          
           echo '❌ **Package Release Failed!**' > telegram_message_error.txt
           echo '' >> telegram_message_error.txt
           echo '📦 **${{ env.PACKAGE_NAME }}** release failed!' >> telegram_message_error.txt
@@ -347,8 +356,9 @@ jobs:
           echo '🔍 **Failure Summary:**' >> telegram_message_error.txt
           
           MESSAGE=$(cat telegram_message_error.txt)
+          ESCAPED_MESSAGE=$(.config/scripts/escape_telegram_message.sh "$MESSAGE")
           echo "message<<EOF" >> $GITHUB_OUTPUT
-          echo "$MESSAGE" >> $GITHUB_OUTPUT
+          echo "$ESCAPED_MESSAGE" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Send Telegram notification on failure
