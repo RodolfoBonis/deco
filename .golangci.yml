@@ -15,6 +15,7 @@ linters:
     - gosec
     - errcheck
     - gocritic
+    - revive
 
 linters-settings:
   gocritic:
@@ -30,4 +31,12 @@ issues:
     - path: _test\.go
       linters:
         - errcheck
-        - gosec 
+        - gosec
+    - path: "decorators.go"
+      linters:
+        - revive
+      text: "^comment on exported type ParserHook should be of the form"
+    - path: "examples/basic/handlers/websocket_handlers.go"
+      linters:
+        - revive
+      text: "^comment on exported function HandleChatMessage should be of the form" 

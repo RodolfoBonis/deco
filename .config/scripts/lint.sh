@@ -24,18 +24,18 @@ else
   echo "go vet: OK"
 fi
 
-# 3. golint (boas práticas)
-if ! command -v golint &> /dev/null; then
-  echo "golint não encontrado. Instale com: go install golang.org/x/lint/golint@latest"
+# 3. golangci-lint (análise estática e boas práticas)
+if ! command -v golangci-lint &> /dev/null; then
+  echo "golangci-lint não encontrado. Instale com: go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest"
   FAIL=1
 else
-  LINT_OUT=$(golint ./...)
-  if [ -n "$LINT_OUT" ]; then
-    echo -e "\nProblemas encontrados pelo golint:"
+  LINT_OUT=$(golangci-lint run 2>&1)
+  if [ $? -ne 0 ]; then
+    echo -e "\nProblemas encontrados pelo golangci-lint:"
     echo "$LINT_OUT"
     FAIL=1
   else
-    echo "golint: OK"
+    echo "golangci-lint: OK"
   fi
 fi
 
