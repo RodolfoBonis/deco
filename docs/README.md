@@ -1,5 +1,11 @@
 # deco Framework Documentation
 
+<div align="center">
+  <img src="./images/deco_gopher.png" alt="Go Gopher Artist" width="200" height="200">
+  <br>
+  <em>The Go Gopher decorator, crafting elegant APIs with simple annotations! ✨</em>
+</div>
+
 Welcome to the deco framework documentation!
 
 ## 📚 Documentation Sections
