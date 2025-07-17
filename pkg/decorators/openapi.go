@@ -444,7 +444,7 @@ func convertRouteToOperation(route RouteEntry, components *OpenAPIComponents) *O
 }
 
 // createRequestBodyFromParameters creates an OpenAPIRequestBody from a slice of ParameterInfo
-func createRequestBodyFromParameters(params []ParameterInfo, components *OpenAPIComponents) *OpenAPIRequestBody {
+func createRequestBodyFromParameters(params []ParameterInfo, _ *OpenAPIComponents) *OpenAPIRequestBody {
 	if len(params) == 0 {
 		return nil
 	}
@@ -481,7 +481,7 @@ func createRequestBodyFromParameters(params []ParameterInfo, components *OpenAPI
 }
 
 // createResponseWithSchema creates an OpenAPIResponse with a schema
-func createResponseWithSchema(code string, description string, components *OpenAPIComponents) OpenAPIResponse {
+func createResponseWithSchema(code string, description string, _ *OpenAPIComponents) OpenAPIResponse {
 	response := OpenAPIResponse{
 		Description: description,
 		Content:     make(map[string]MediaType),
@@ -529,7 +529,7 @@ func createResponseWithSchema(code string, description string, components *OpenA
 }
 
 // createResponseWithSchemaAndType creates an OpenAPIResponse using ResponseInfo
-func createResponseWithSchemaAndType(responseInfo ResponseInfo, components *OpenAPIComponents) OpenAPIResponse {
+func createResponseWithSchemaAndType(responseInfo ResponseInfo, _ *OpenAPIComponents) OpenAPIResponse {
 	response := OpenAPIResponse{
 		Description: responseInfo.Description,
 		Content:     make(map[string]MediaType),
@@ -617,7 +617,7 @@ func findSchemaByPattern(pattern string) *SchemaInfo {
 }
 
 // convertToOpenAPIParameter converts ParameterInfo to OpenAPIParameter
-func convertToOpenAPIParameter(param ParameterInfo, components *OpenAPIComponents) OpenAPIParameter {
+func convertToOpenAPIParameter(param ParameterInfo, _ *OpenAPIComponents) OpenAPIParameter {
 	openAPIParam := OpenAPIParameter{
 		Name:        param.Name,
 		In:          param.Location,

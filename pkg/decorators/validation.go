@@ -257,7 +257,7 @@ func ValidateParams(rules map[string]string, config *ValidationConfig) gin.Handl
 }
 
 // getValidationMessage returns custom error message
-func getValidationMessage(fieldErr validator.FieldError, config *ValidationConfig) string {
+func getValidationMessage(fieldErr validator.FieldError, _ *ValidationConfig) string {
 	field := fieldErr.Field()
 	tag := fieldErr.Tag()
 	param := fieldErr.Param()

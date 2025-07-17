@@ -415,7 +415,7 @@ func parseFile(fset *token.FileSet, fileName string, file *ast.File, pkgName str
 }
 
 // parseFunction analyzes a function and extracts metadata if it is a handler
-func parseFunction(fset *token.FileSet, fileName string, funcDecl *ast.FuncDecl, pkgName string) *RouteMeta {
+func parseFunction(_ *token.FileSet, fileName string, funcDecl *ast.FuncDecl, pkgName string) *RouteMeta {
 	funcName := funcDecl.Name.Name
 
 	// Check if it has comments

@@ -36,7 +36,7 @@ func ClearSchemas() {
 }
 
 // parseEntityFromStruct extracts entity metadata from a struct declaration
-func parseEntityFromStruct(fset *token.FileSet, fileName string, structDecl *ast.GenDecl, pkgName string) *EntityMeta {
+func parseEntityFromStruct(_ *token.FileSet, fileName string, structDecl *ast.GenDecl, pkgName string) *EntityMeta {
 	if structDecl.Doc == nil {
 		return nil
 	}
@@ -315,9 +315,10 @@ func extractValidationConstraints(validation string, prop *PropertyInfo) {
 	if minRegex := regexp.MustCompile(`min=(\d+)`); minRegex.MatchString(validation) {
 		if matches := minRegex.FindStringSubmatch(validation); len(matches) > 1 {
 			if val, err := strconv.Atoi(matches[1]); err == nil {
-				if prop.Type == "string" {
+				switch prop.Type {
+				case "string":
 					prop.MinLength = &val
-				} else if prop.Type == "integer" || prop.Type == "number" {
+				case "integer", "number":
 					min := float64(val)
 					prop.Minimum = &min
 				}
@@ -328,9 +329,10 @@ func extractValidationConstraints(validation string, prop *PropertyInfo) {
 	if maxRegex := regexp.MustCompile(`max=(\d+)`); maxRegex.MatchString(validation) {
 		if matches := maxRegex.FindStringSubmatch(validation); len(matches) > 1 {
 			if val, err := strconv.Atoi(matches[1]); err == nil {
-				if prop.Type == "string" {
+				switch prop.Type {
+				case "string":
 					prop.MaxLength = &val
-				} else if prop.Type == "integer" || prop.Type == "number" {
+				case "integer", "number":
 					max := float64(val)
 					prop.Maximum = &max
 				}

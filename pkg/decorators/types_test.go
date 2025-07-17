@@ -165,7 +165,6 @@ func TestSchemaInfo_Structure(t *testing.T) {
 		Type:        "object",
 		Properties:  properties,
 		Required:    []string{"name"},
-		Example:     map[string]interface{}{"name": "John", "age": 30},
 		PackageName: "models",
 		FileName:    "user.go",
 	}

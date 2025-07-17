@@ -181,7 +181,7 @@ func (r *RedisRateLimiter) Allow(ctx context.Context, key string, limit int, win
 
 	result, err := r.client.Eval(ctx, script, []string{key}, limit, windowSeconds, now).Result()
 	if err != nil {
-		return false, 0, 0, fmt.Errorf("Redis rate limiting error: %v", err)
+		return false, 0, 0, fmt.Errorf("redis rate limiting error: %v", err)
 	}
 
 	values := result.([]interface{})

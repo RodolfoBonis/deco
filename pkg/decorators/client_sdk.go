@@ -300,15 +300,15 @@ func (g *GoSDKGenerator) generateHeaders() string {
 	}`
 }
 
-func (g *GoSDKGenerator) generateReturnType(responses map[string]OpenAPIResponse) string {
+func (g *GoSDKGenerator) generateReturnType(_ map[string]OpenAPIResponse) string {
 	return "interface{}" // Simplificado
 }
 
-func (g *GoSDKGenerator) generateZeroValue(responses map[string]OpenAPIResponse) string {
+func (g *GoSDKGenerator) generateZeroValue(_ map[string]OpenAPIResponse) string {
 	return "nil"
 }
 
-func (g *GoSDKGenerator) generateResponseHandling(responses map[string]OpenAPIResponse) string {
+func (g *GoSDKGenerator) generateResponseHandling(_ map[string]OpenAPIResponse) string {
 	return `body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("error reading response: %w", err)
