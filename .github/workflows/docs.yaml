@@ -51,7 +51,21 @@ jobs:
           go build -v -o deco ./cmd/deco
 
       - name: Create docs directory
-        run: mkdir -p docs
+        run: |
+          mkdir -p docs
+          mkdir -p docs/images
+
+      - name: Copy documentation images
+        run: |
+          # Copia a imagem do Go Gopher se existir
+          if [ -f "docs/images/deco_gopher.png" ]; then
+            cp docs/images/deco_gopher.png docs/images/
+            echo "✅ Image copied successfully"
+          else
+            echo "⚠️ Image not found, using placeholder"
+            # Cria um placeholder se a imagem não existir
+            echo "<!-- Placeholder for deco_gopher.png -->" > docs/images/deco_gopher.png
+          fi
 
       - name: Generate API documentation
         run: |
@@ -165,26 +179,47 @@ jobs:
           # Pega os últimos 10 commits
           git log --oneline -10 >> docs/changelog.md
 
-      - name: Create documentation index
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Python dependencies
         run: |
-          echo "# deco Framework Documentation" > docs/README.md
-          echo "" >> docs/README.md
-          echo "Welcome to the deco framework documentation!" >> docs/README.md
-          echo "" >> docs/README.md
-          echo "## 📚 Documentation Sections" >> docs/README.md
-          echo "" >> docs/README.md
-          echo "- [Installation Guide](./installation.md) - How to install and set up deco" >> docs/README.md
-          echo "- [Usage Guide](./usage.md) - Complete guide to using decorators and features" >> docs/README.md
-          echo "- [CLI Reference](./cli.md) - Command line interface documentation" >> docs/README.md
-          echo "- [API Reference](./api.md) - Complete API documentation" >> docs/README.md
-          echo "- [Examples](./examples.md) - Code examples and tutorials" >> docs/README.md
-          echo "- [Changelog](./changelog.md) - Recent changes and updates" >> docs/README.md
-          echo "" >> docs/README.md
-          echo "## 🚀 Quick Links" >> docs/README.md
-          echo "" >> docs/README.md
-          echo "- [GitHub Repository](https://github.com/RodolfoBonis/deco)" >> docs/README.md
-          echo "- [Go Package](https://pkg.go.dev/github.com/RodolfoBonis/deco)" >> docs/README.md
-          echo "- [Issues](https://github.com/RodolfoBonis/deco/issues)" >> docs/README.md
+          pip install pyyaml
+
+      - name: Generate documentation index
+        run: |
+          # Use Python script to generate README from docs.yaml
+          if [ -f ".config/scripts/generate_docs_readme.py" ]; then
+            python .config/scripts/generate_docs_readme.py
+          else
+            # Fallback to manual generation
+            echo "# deco Framework Documentation" > docs/README.md
+            echo "" >> docs/README.md
+            echo "<div align=\"center\">" >> docs/README.md
+            echo "  <img src=\"./images/deco_gopher.png\" alt=\"Go Gopher Artist\" width=\"200\" height=\"200\">" >> docs/README.md
+            echo "  <br>" >> docs/README.md
+            echo "  <em>The Go Gopher decorator, crafting elegant APIs with simple annotations! ✨</em>" >> docs/README.md
+            echo "</div>" >> docs/README.md
+            echo "" >> docs/README.md
+            echo "Welcome to the deco framework documentation!" >> docs/README.md
+            echo "" >> docs/README.md
+            echo "## 📚 Documentation Sections" >> docs/README.md
+            echo "" >> docs/README.md
+            echo "- [Installation Guide](./installation.md) - How to install and set up deco" >> docs/README.md
+            echo "- [Usage Guide](./usage.md) - Complete guide to using decorators and features" >> docs/README.md
+            echo "- [CLI Reference](./cli.md) - Command line interface documentation" >> docs/README.md
+            echo "- [API Reference](./api.md) - Complete API documentation" >> docs/README.md
+            echo "- [Examples](./examples.md) - Code examples and tutorials" >> docs/README.md
+            echo "- [Changelog](./changelog.md) - Recent changes and updates" >> docs/README.md
+            echo "" >> docs/README.md
+            echo "## 🚀 Quick Links" >> docs/README.md
+            echo "" >> docs/README.md
+            echo "- [GitHub Repository](https://github.com/RodolfoBonis/deco)" >> docs/README.md
+            echo "- [Go Package](https://pkg.go.dev/github.com/RodolfoBonis/deco)" >> docs/README.md
+            echo "- [Issues](https://github.com/RodolfoBonis/deco/issues)" >> docs/README.md
+          fi
 
       - name: Upload documentation artifacts
         uses: actions/upload-artifact@v4
