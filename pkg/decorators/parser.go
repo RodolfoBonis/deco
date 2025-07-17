@@ -354,14 +354,6 @@ func validateArgumentCount(decoratorName string, args []string) error {
 	return nil
 }
 
-// parseEntityFromStructWithValidation parses entity from struct with validation
-func parseEntityFromStructWithValidation(fset *token.FileSet, fileName string, genDecl *ast.GenDecl, pkgName string) (*EntityMeta, *ValidationError) {
-	// This function would contain the existing parseEntityFromStruct logic
-	// with added validation. For now, let's call the existing function
-	entity := parseEntityFromStruct(fset, fileName, genDecl, pkgName)
-	return entity, nil
-}
-
 // contains checks if slice contains string
 func contains(slice []string, item string) bool {
 	for _, s := range slice {
@@ -383,124 +375,6 @@ func (e *MultipleValidationError) Error() string {
 		messages = append(messages, err.Error())
 	}
 	return strings.Join(messages, "\n")
-}
-
-// parseFile analyzes a specific file
-func parseFile(fset *token.FileSet, fileName string, file *ast.File, pkgName string) ([]*RouteMeta, error) {
-	var routes []*RouteMeta
-
-	// Process each declaration in the file
-	for _, decl := range file.Decls {
-		// Look for functions
-		if funcDecl, ok := decl.(*ast.FuncDecl); ok {
-			route := parseFunction(fset, fileName, funcDecl, pkgName)
-			if route != nil {
-				routes = append(routes, route)
-			}
-		}
-
-		// Look for structs with @Schema annotations
-		if genDecl, ok := decl.(*ast.GenDecl); ok {
-			entity := parseEntityFromStruct(fset, fileName, genDecl, pkgName)
-			if entity != nil {
-				// Convert entity to schema and register it
-				schema := convertEntityToSchema(entity)
-				RegisterSchema(schema)
-				LogVerbose("Schema detected and registered: %s", schema.Name)
-			}
-		}
-	}
-
-	return routes, nil
-}
-
-// parseFunction analyzes a function and extracts metadata if it is a handler
-func parseFunction(_ *token.FileSet, fileName string, funcDecl *ast.FuncDecl, pkgName string) *RouteMeta {
-	funcName := funcDecl.Name.Name
-
-	// Check if it has comments
-	if funcDecl.Doc == nil {
-		return nil
-	}
-
-	// Join all comments
-	var comments []string
-	for _, comment := range funcDecl.Doc.List {
-		comments = append(comments, comment.Text)
-	}
-	commentText := strings.Join(comments, "\n")
-
-	// Extract all markers first
-	markers := extractMarkers(commentText)
-
-	// Look for @Route
-	routeMatches := routeRegex.FindStringSubmatch(commentText)
-
-	// Check if it's a WebSocket handler without route
-	hasWebSocketWithArgs := false
-	for _, marker := range markers {
-		if marker.Name == "WebSocket" && len(marker.Args) > 0 {
-			hasWebSocketWithArgs = true
-			break
-		}
-	}
-
-	// If it has @WebSocket with args but no @Route, create a WebSocket-only meta
-	if hasWebSocketWithArgs && len(routeMatches) != 3 {
-		fmt.Printf("✅ Creating WebSocket-only handler for %s\n", funcName)
-		route := &RouteMeta{
-			Method:      "", // No HTTP method for pure WebSocket handlers
-			Path:        "", // No HTTP path for pure WebSocket handlers
-			FuncName:    funcName,
-			PackageName: pkgName,
-			FileName:    filepath.Base(fileName),
-			Markers:     markers,
-		}
-		return route
-	}
-
-	// If it has @Route, process normally
-	if len(routeMatches) == 3 {
-		method := routeMatches[1]
-		path := routeMatches[2]
-
-		route := &RouteMeta{
-			Method:      method,
-			Path:        path,
-			FuncName:    funcName,
-			PackageName: pkgName,
-			FileName:    filepath.Base(fileName),
-			Markers:     markers,
-		}
-		return route
-	}
-
-	return nil // Neither route handler nor WebSocket handler
-}
-
-// extractMarkers extracts all markers from a comment
-func extractMarkers(commentText string) []MarkerInstance {
-	var markers []MarkerInstance
-
-	// Look for each registered marker
-	for name, config := range GetMarkers() {
-		matches := config.Pattern.FindAllStringSubmatch(commentText, -1)
-		for _, match := range matches {
-			marker := MarkerInstance{
-				Name: name,
-				Raw:  match[0],
-			}
-
-			// Extract arguments if they exist
-			if len(match) > 1 && match[1] != "" {
-				marker.Args = parseArguments(match[1])
-			}
-
-			markers = append(markers, marker)
-		}
-	}
-
-	return markers
 }
 
 // parseArguments converte string de argumentos em slice

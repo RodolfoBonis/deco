@@ -480,54 +480,6 @@ func createRequestBodyFromParameters(params []ParameterInfo, _ *OpenAPIComponent
 	return requestBody
 }
 
-// createResponseWithSchema creates an OpenAPIResponse with a schema
-func createResponseWithSchema(code string, description string, _ *OpenAPIComponents) OpenAPIResponse {
-	response := OpenAPIResponse{
-		Description: description,
-		Content:     make(map[string]MediaType),
-	}
-
-	// Try to find a specific response schema
-	var schemaName string
-	switch code {
-	case "200", "201":
-		// Try to find common response schemas
-		if schema := findSchemaByPattern("Response"); schema != nil {
-			schemaName = schema.Name
-		} else if schema := findSchemaByPattern("UserResponse"); schema != nil {
-			schemaName = schema.Name
-		}
-	case "400", "401", "403", "404", "500":
-		// Try to find error response schema
-		if schema := findSchemaByPattern("ErrorResponse"); schema != nil {
-			schemaName = schema.Name
-		} else if schema := findSchemaByPattern("Error"); schema != nil {
-			schemaName = schema.Name
-		}
-	}
-
-	if schemaName != "" {
-		response.Content["application/json"] = MediaType{
-			Schema: &OpenAPISchema{
-				Ref: fmt.Sprintf("#/components/schemas/%s", schemaName),
-			},
-		}
-	} else {
-		// Create a generic response schema
-		response.Content["application/json"] = MediaType{
-			Schema: &OpenAPISchema{
-				Type: "object",
-				Properties: map[string]*OpenAPISchema{
-					"message": {Type: "string"},
-					"data":    {Type: "object"},
-				},
-			},
-		}
-	}
-
-	return response
-}
-
 // createResponseWithSchemaAndType creates an OpenAPIResponse using ResponseInfo
 func createResponseWithSchemaAndType(responseInfo ResponseInfo, _ *OpenAPIComponents) OpenAPIResponse {
 	response := OpenAPIResponse{

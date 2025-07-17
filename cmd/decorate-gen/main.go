@@ -403,11 +403,6 @@ func handleLegacyMode(rootDir, outputPath, packageName, templatePath string, val
 	return nil
 }
 
-// generateFromFiles generates code from file list
-func generateFromFiles(handlerFiles []string, outputPath, packageName, templatePath string, validate, verbose bool) error {
-	return generateFromFilesWithConfig(handlerFiles, outputPath, packageName, templatePath, validate, verbose, nil)
-}
-
 // generateFromFilesWithConfig generates code with specific configuration
 func generateFromFilesWithConfig(handlerFiles []string, outputPath, packageName, templatePath string, validate, verbose bool, config *decorators.Config) error {
 	// Extract common directory from files to use as root
