@@ -1,0 +1,314 @@
+name: CD Package
+
+on:
+  workflow_run:
+    workflows: ['CI Package']
+    types:
+      - completed
+    branches:
+      - main
+
+jobs:
+  get_commit_messages:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    env:
+      GH_TOKEN: ${{ secrets.GH_TOKEN }}
+    steps:
+        - name: Install GitHub CLI
+          run: sudo apt-get install gh -y
+
+        - name: Check out repository
+          uses: actions/checkout@v4
+          with:
+            token: ${{ secrets.GH_TOKEN }}
+            fetch-depth: 0
+
+        - name: Get commit information
+          id: commit_info
+          run: |
+            # Tenta pegar informações da última PR mesclada
+            pr_info=$(gh pr list --state merged --limit 1 --json number,title,body,mergeCommit)
+            
+            # Verifica se encontrou uma PR
+            if [ "$(echo "$pr_info" | jq '. | length')" -gt 0 ] && [ "$(echo "$pr_info" | jq -r '.[0].mergeCommit.oid')" = "$(git rev-parse HEAD)" ]; then
+              # É uma PR mesclada
+              pr_number=$(echo "$pr_info" | jq -r '.[0].number')
+              echo "🔄 Pull Request #$pr_number" > commit_messages.txt
+              echo "$(echo "$pr_info" | jq -r '.[0].title')" >> commit_messages.txt
+              echo "" >> commit_messages.txt
+            
+              pr_body=$(echo "$pr_info" | jq -r '.[0].body')
+              if [ "$pr_body" != "null" ] && [ ! -z "$pr_body" ]; then
+                echo "📝 Description:" >> commit_messages.txt
+                echo "$pr_body" >> commit_messages.txt
+                echo "" >> commit_messages.txt
+              fi
+            
+              echo "📦 Commits:" >> commit_messages.txt
+              gh pr view $pr_number --json commits --jq '.commits[] | "• " + .messageHeadline + if .messageBody then "\n  " + (.messageBody | gsub("\n"; "\n  ")) else "" end' >> commit_messages.txt
+            else
+              # É um push direto na main
+              echo "📦 Direct Push to Main" > commit_messages.txt
+              echo "" >> commit_messages.txt
+            
+              # Pega o último commit
+              last_commit=$(git log -1 --pretty=format:"%s%n%n%b")
+              echo "• $last_commit" >> commit_messages.txt
+            
+              # Se houver mais commits no push, adiciona eles também
+              additional_commits=$(git log HEAD~1..HEAD^ --pretty=format:"• %s%n  %b")
+              if [ ! -z "$additional_commits" ]; then
+                echo "$additional_commits" >> commit_messages.txt
+              fi
+            fi
+
+        - name: Upload commit messages
+          uses: actions/upload-artifact@v4
+          with:
+            name: commit-messages
+            path: commit_messages.txt
+
+  build_and_release:
+    needs: get_commit_messages
+    runs-on: ${{ matrix.os }}
+    outputs:
+      VERSION: ${{ env.VERSION }}
+      BINARY_NAME: ${{ env.BINARY_NAME }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_TOKEN }}
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 1.23
+
+      - name: Increment version
+        run: |
+          chmod +x ./.config/scripts/increment_version.sh
+          ./.config/scripts/increment_version.sh
+          echo "VERSION=$(cat version.txt)" >> $GITHUB_ENV
+
+      - name: Add, commit and push version increment
+        uses: EndBug/add-and-commit@v9
+        with:
+          author_name: "GitHub Actions"
+          author_email: "actions@github.com"
+          message: "chore: increment version to ${{ env.VERSION }}"
+          add: "version.txt"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+
+      - name: Set binary name based on OS
+        run: |
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            echo "BINARY_NAME=deco.exe" >> $GITHUB_ENV
+          else
+            echo "BINARY_NAME=deco" >> $GITHUB_ENV
+          fi
+
+      - name: Build binary
+        run: |
+          go build -v -ldflags="-s -w -X main.version=${{ env.VERSION }}" -o ${{ env.BINARY_NAME }} ./cmd/decorate-gen
+          ./${{ env.BINARY_NAME }} version
+
+      - name: Test binary functionality
+        run: |
+          ./${{ env.BINARY_NAME }} --help
+          ./${{ env.BINARY_NAME }} version
+
+      - name: Create release assets directory
+        run: mkdir -p release-assets
+
+      - name: Archive binary
+        run: |
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            7z a release-assets/deco-${{ env.VERSION }}-${{ runner.os }}-${{ runner.arch }}.zip ${{ env.BINARY_NAME }}
+          else
+            tar -czf release-assets/deco-${{ env.VERSION }}-${{ runner.os }}-${{ runner.arch }}.tar.gz ${{ env.BINARY_NAME }}
+          fi
+
+      - name: Upload release assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-assets-${{ runner.os }}-${{ runner.arch }}
+          path: release-assets/
+
+      - name: Create Tag for Release
+        id: create_tag
+        if: ${{ job.status == 'success' }}
+        run: echo "tag=v${{ env.VERSION }}" >> $GITHUB_OUTPUT
+
+      - name: Download commit messages
+        uses: actions/download-artifact@v4
+        with:
+          name: commit-messages
+          path: .
+
+      - name: Create Release
+        id: create_release
+        if: ${{ job.status == 'success' && matrix.os == 'ubuntu-latest' }}
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+        with:
+          tag_name: ${{ steps.create_tag.outputs.tag }}
+          release_name: Release ${{ env.VERSION }}
+          body: |
+            ## 🚀 deco Framework v${{ env.VERSION }}
+            
+            ### 📦 What's New
+            This release includes the latest improvements and bug fixes for the deco Go framework.
+            
+            ### 🔧 Installation
+            ```bash
+            go install github.com/RodolfoBonis/deco/cmd/decorate-gen@v${{ env.VERSION }}
+            ```
+            
+            ### 📋 Changes in this Release:
+          body_path: commit_messages.txt
+          draft: false
+          prerelease: false
+
+  publish_to_go_proxy:
+    needs: build_and_release
+    runs-on: ubuntu-latest
+    if: ${{ needs.build_and_release.result == 'success' }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_TOKEN }}
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 1.23
+
+      - name: Publish to Go Proxy
+        run: |
+          # Verifica se o módulo está pronto para publicação
+          go mod tidy
+          go mod verify
+          
+          # Cria uma tag para publicação no Go Proxy
+          git tag v${{ needs.build_and_release.outputs.VERSION }}
+          git push origin v${{ needs.build_and_release.outputs.VERSION }}
+          
+          echo "✅ Package published to Go Proxy"
+          echo "📦 Available at: https://pkg.go.dev/github.com/RodolfoBonis/deco@v${{ needs.build_and_release.outputs.VERSION }}"
+
+  generate_documentation:
+    needs: build_and_release
+    runs-on: ubuntu-latest
+    if: ${{ needs.build_and_release.result == 'success' }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_TOKEN }}
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 1.23
+
+      - name: Generate API documentation
+        run: |
+          # Gera documentação da API
+          go doc -all ./pkg/decorators > docs/api.md
+          
+          # Gera documentação do comando
+          ./deco --help > docs/usage.md
+          
+          # Atualiza README com versão
+          sed -i "s/Version: .*/Version: ${{ needs.build_and_release.outputs.VERSION }}/" README.md
+
+      - name: Commit documentation updates
+        uses: EndBug/add-and-commit@v9
+        with:
+          author_name: "GitHub Actions"
+          author_email: "actions@github.com"
+          message: "docs: update documentation for v${{ needs.build_and_release.outputs.VERSION }}"
+          add: "docs/ README.md"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+
+  notify:
+    needs: [build_and_release, publish_to_go_proxy, generate_documentation]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Download commit messages
+        uses: actions/download-artifact@v4
+        with:
+          name: commit-messages
+          path: .
+
+      - name: Read commit messages
+        id: get_messages
+        if: ${{ needs.build_and_release.result != 'success' }}
+        run: |
+          messages=$(cat commit_messages.txt)
+          echo "messages=$(echo "$messages" | jq -R -s -c 'split("\n")')" >> $GITHUB_OUTPUT
+
+      - if: ${{ needs.build_and_release.result == 'success' && needs.publish_to_go_proxy.result == 'success' && needs.generate_documentation.result == 'success' }}
+        name: Send Success Message via Telegram
+        uses: akeylimepie/telegram-action@main
+        with:
+          token: ${{ secrets.BOTTOKEN }}
+          chat_id: ${{ secrets.CHAT_ID }}
+          parse_mode: 'markdown'
+          message_thread_id: ${{ secrets.THREAD_ID }}
+          text: |
+            🚀 *Package Release Successful!*
+            
+            *New Release Details:*
+            • Version: ${{ needs.build_and_release.outputs.VERSION }}
+            • Created by: ${{ github.actor }}
+            • Repository: ${{ github.repository }}
+            
+            📝 *Release Notes:* [Release ${{ needs.build_and_release.outputs.VERSION }}](https://github.com/${{ github.repository }}/releases/tag/v${{ needs.build_and_release.outputs.VERSION }})
+            
+            ✅ Release Status: Success
+            📦 Go Proxy: Published
+            📚 Documentation: Updated
+            
+            🔧 *Installation:*
+            ```bash
+            go install github.com/RodolfoBonis/deco/cmd/decorate-gen@v${{ needs.build_and_release.outputs.VERSION }}
+            ```
+            
+            🎉 Package released successfully!
+
+      - if: ${{ needs.build_and_release.result != 'success' || needs.publish_to_go_proxy.result != 'success' || needs.generate_documentation.result != 'success' }}
+        name: Send Error Message via Telegram
+        uses: akeylimepie/telegram-action@main
+        with:
+          token: ${{ secrets.BOTTOKEN }}
+          chat_id: ${{ secrets.CHAT_ID }}
+          parse_mode: 'markdown'
+          message_thread_id: ${{ secrets.THREAD_ID }}
+          text: |
+            ❌ *Package Release Failed!*
+            
+            *Error Details:*
+            • Repository: ${{ github.repository }}
+            • Triggered by: ${{ github.actor }}
+            • Commit: ${{ github.sha }}
+            
+            🔍 *Debug Information:*
+            • Build Status: ${{ needs.build_and_release.result }}
+            • Go Proxy Status: ${{ needs.publish_to_go_proxy.result }}
+            • Documentation Status: ${{ needs.generate_documentation.result }}
+            • Commit URL: https://github.com/${{ github.repository }}/commit/${{ github.sha }}
+            
+            📋 *Recent Changes:*
+            ${{ join(fromJSON(steps.get_messages.outputs.messages), '\n') }} 
