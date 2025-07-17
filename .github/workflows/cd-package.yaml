@@ -275,6 +275,9 @@ jobs:
           # Gera documentação da API
           go doc -all ./pkg/decorators > docs/api.md
           
+          # Compila o binário para gerar documentação do comando
+          go build -v -o deco ./cmd/decorate-gen
+          
           # Gera documentação do comando
           ./deco --help > docs/usage.md
           
@@ -295,10 +298,11 @@ jobs:
     name: Notify Success
     needs: [build_and_release, publish_to_go_proxy, generate_documentation]
     runs-on: ubuntu-latest
-    if: always() && ${{ needs.build_and_release.result == 'success' && needs.publish_to_go_proxy.result == 'success' && needs.generate_documentation.result == 'success' }}
+    if: always()
     steps:
       - name: Generate success message
         id: generate_success_message
+        if: ${{ needs.build_and_release.result == 'success' && needs.publish_to_go_proxy.result == 'success' && needs.generate_documentation.result == 'success' }}
         shell: bash
         run: |
           # Verifica se o script existe e dá permissão de execução
@@ -333,6 +337,7 @@ jobs:
 
       - name: Send Telegram notification on success
         uses: an3park/telegram-action@v1
+        if: ${{ needs.build_and_release.result == 'success' && needs.publish_to_go_proxy.result == 'success' && needs.generate_documentation.result == 'success' }}
         with:
           chat_id: ${{ secrets.CHAT_ID }}
           bot_token: ${{ secrets.BOTTOKEN }}
@@ -343,10 +348,11 @@ jobs:
     name: Notify Failure
     runs-on: ubuntu-latest
     needs: [build_and_release, publish_to_go_proxy, generate_documentation]
-    if: always() && ${{ needs.build_and_release.result != 'success' || needs.publish_to_go_proxy.result != 'success' || needs.generate_documentation.result != 'success' }}
+    if: always()
     steps:
       - name: Generate failure message
         id: generate_error_message
+        if: ${{ needs.build_and_release.result != 'success' || needs.publish_to_go_proxy.result != 'success' || needs.generate_documentation.result != 'success' }}
         shell: bash
         run: |
           # Verifica se o script existe e dá permissão de execução
@@ -389,6 +395,7 @@ jobs:
 
       - name: Send Telegram notification on failure
         uses: an3park/telegram-action@v1
+        if: ${{ needs.build_and_release.result != 'success' || needs.publish_to_go_proxy.result != 'success' || needs.generate_documentation.result != 'success' }}
         with:
           chat_id: ${{ secrets.CHAT_ID }}
           bot_token: ${{ secrets.BOTTOKEN }}
