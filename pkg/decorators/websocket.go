@@ -16,7 +16,7 @@ import (
 var WebSocketUpgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
-	CheckOrigin: func(r *http.Request) bool {
+	CheckOrigin: func(_ *http.Request) bool {
 		// By default, accept all origins (configurable)
 		return true
 	},
@@ -87,7 +87,7 @@ func InitWebSocket(config WebSocketConfig) *WebSocketHub {
 	// Configure upgrader
 	WebSocketUpgrader.ReadBufferSize = config.ReadBuffer
 	WebSocketUpgrader.WriteBufferSize = config.WriteBuffer
-	WebSocketUpgrader.CheckOrigin = func(r *http.Request) bool {
+	WebSocketUpgrader.CheckOrigin = func(_ *http.Request) bool {
 		return !config.CheckOrigin // If CheckOrigin is false, accept all origins
 	}
 
@@ -591,7 +591,7 @@ func WebSocketStatsHandler() gin.HandlerFunc {
 }
 
 // WebSocketHandlerWrapper converts WebSocketHandler to gin.HandlerFunc for documentation
-func WebSocketHandlerWrapper(handler WebSocketHandler) gin.HandlerFunc {
+func WebSocketHandlerWrapper(_ WebSocketHandler) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// This is just a wrapper for documentation purposes
 		// The actual WebSocket handling is done by the WebSocket system

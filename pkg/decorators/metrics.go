@@ -427,7 +427,7 @@ func HealthCheckHandler() gin.HandlerFunc {
 }
 
 // createMetricsMiddleware creates metrics middleware (for markers.go)
-func createMetricsMiddleware(args []string) gin.HandlerFunc {
+func createMetricsMiddleware(_ []string) gin.HandlerFunc {
 	config := DefaultConfig().Metrics
 	return MetricsMiddleware(&config)
 }

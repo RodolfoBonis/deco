@@ -805,7 +805,7 @@ func OpenAPIYAMLHandler(config *Config) gin.HandlerFunc {
 }
 
 // SwaggerUIHandler serves Swagger UI interface for API documentation
-func SwaggerUIHandler(config *Config) gin.HandlerFunc {
+func SwaggerUIHandler(_ *Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// HTML template for Swagger UI
 		swaggerHTML := `<!DOCTYPE html>

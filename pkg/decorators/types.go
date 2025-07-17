@@ -104,7 +104,7 @@ type EntityMeta struct {
 type FieldMeta struct {
 	Name        string      `json:"name"`
 	Type        string      `json:"type"`
-	JsonTag     string      `json:"json_tag"`
+	JSONTag     string      `json:"json_tag"`
 	Description string      `json:"description"`
 	Example     interface{} `json:"example,omitempty"`
 	Validation  string      `json:"validation,omitempty"` // from validate tags

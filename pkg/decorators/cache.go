@@ -92,7 +92,7 @@ func NewMemoryCache(maxSize int) *MemoryCache {
 }
 
 // Get retrieves cache entry (in-memory implementation)
-func (m *MemoryCache) Get(ctx context.Context, key string) (*CacheEntry, error) {
+func (m *MemoryCache) Get(_ context.Context, key string) (*CacheEntry, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
@@ -123,7 +123,7 @@ func (m *MemoryCache) Get(ctx context.Context, key string) (*CacheEntry, error) 
 }
 
 // Set stores cache entry (in-memory implementation)
-func (m *MemoryCache) Set(ctx context.Context, key string, entry *CacheEntry, ttl time.Duration) error {
+func (m *MemoryCache) Set(_ context.Context, key string, entry *CacheEntry, ttl time.Duration) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -131,7 +131,7 @@ func (m *MemoryCache) Set(ctx context.Context, key string, entry *CacheEntry, tt
 	if len(m.data) >= m.maxSize {
 		// Simple LRU: remove oldest entry
 		var oldestKey string
-		var oldestTime time.Time = time.Now()
+		var oldestTime = time.Now()
 
 		for k, v := range m.data {
 			if v.ExpiresAt.Before(oldestTime) {
@@ -155,7 +155,7 @@ func (m *MemoryCache) Set(ctx context.Context, key string, entry *CacheEntry, tt
 }
 
 // Delete removes cache entry (in-memory implementation)
-func (m *MemoryCache) Delete(ctx context.Context, key string) error {
+func (m *MemoryCache) Delete(_ context.Context, key string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -169,7 +169,7 @@ func (m *MemoryCache) Delete(ctx context.Context, key string) error {
 }
 
 // Clear clears entire cache (in-memory implementation)
-func (m *MemoryCache) Clear(ctx context.Context) error {
+func (m *MemoryCache) Clear(_ context.Context) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 

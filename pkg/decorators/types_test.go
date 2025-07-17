@@ -299,14 +299,14 @@ func TestEntityMeta_Structure(t *testing.T) {
 		{
 			Name:        "ID",
 			Type:        "int",
-			JsonTag:     "id",
+			JSONTag:     "id",
 			Description: "User ID",
 			Validation:  "required",
 		},
 		{
 			Name:        "Name",
 			Type:        "string",
-			JsonTag:     "name",
+			JSONTag:     "name",
 			Description: "User name",
 			Validation:  "required,min=2",
 		},
@@ -342,12 +342,12 @@ func TestEntityMeta_Structure(t *testing.T) {
 	// Test fields
 	assert.Equal(t, "ID", entity.Fields[0].Name)
 	assert.Equal(t, "int", entity.Fields[0].Type)
-	assert.Equal(t, "id", entity.Fields[0].JsonTag)
+	assert.Equal(t, "id", entity.Fields[0].JSONTag)
 	assert.Equal(t, "required", entity.Fields[0].Validation)
 
 	assert.Equal(t, "Name", entity.Fields[1].Name)
 	assert.Equal(t, "string", entity.Fields[1].Type)
-	assert.Equal(t, "name", entity.Fields[1].JsonTag)
+	assert.Equal(t, "name", entity.Fields[1].JSONTag)
 	assert.Equal(t, "required,min=2", entity.Fields[1].Validation)
 }
 
@@ -357,7 +357,7 @@ func TestFieldMeta_Structure(t *testing.T) {
 	field := &FieldMeta{
 		Name:        "Email",
 		Type:        "string",
-		JsonTag:     "email",
+		JSONTag:     "email",
 		Description: "User email address",
 		Example:     "user@example.com",
 		Validation:  "required,email",
@@ -365,7 +365,7 @@ func TestFieldMeta_Structure(t *testing.T) {
 
 	assert.Equal(t, "Email", field.Name)
 	assert.Equal(t, "string", field.Type)
-	assert.Equal(t, "email", field.JsonTag)
+	assert.Equal(t, "email", field.JSONTag)
 	assert.Equal(t, "User email address", field.Description)
 	assert.Equal(t, "user@example.com", field.Example)
 	assert.Equal(t, "required,email", field.Validation)

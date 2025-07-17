@@ -75,7 +75,7 @@ func NewMemoryRateLimiter() *MemoryRateLimiter {
 }
 
 // Allow checks if the request can proceed (in-memory implementation)
-func (m *MemoryRateLimiter) Allow(ctx context.Context, key string, limit int, window time.Duration) (allowed bool, remaining int, retryAfter time.Duration, err error) {
+func (m *MemoryRateLimiter) Allow(_ context.Context, key string, limit int, window time.Duration) (allowed bool, remaining int, retryAfter time.Duration, err error) {
 	now := time.Now()
 
 	bucket, exists := m.buckets[key]
@@ -116,7 +116,7 @@ func (m *MemoryRateLimiter) Allow(ctx context.Context, key string, limit int, wi
 }
 
 // Reset clears the bucket for a key (in-memory implementation)
-func (m *MemoryRateLimiter) Reset(ctx context.Context, key string) error {
+func (m *MemoryRateLimiter) Reset(_ context.Context, key string) error {
 	delete(m.buckets, key)
 	return nil
 }
@@ -193,7 +193,7 @@ func (r *RedisRateLimiter) Allow(ctx context.Context, key string, limit int, win
 }
 
 // Reset clears the bucket for a key (Redis implementation)
-func (r *RedisRateLimiter) Reset(ctx context.Context, key string) error {
+func (r *RedisRateLimiter) Reset(_ context.Context, key string) error {
 	return r.client.Del(context.Background(), key).Err()
 }
 
@@ -277,7 +277,7 @@ func RateLimitByEndpoint(config *RateLimitConfig) gin.HandlerFunc {
 }
 
 // CustomRateLimit customizable rate limiting middleware
-func CustomRateLimit(limit int, window time.Duration, keyGen KeyGeneratorFunc, rateLimiterType string) gin.HandlerFunc {
+func CustomRateLimit(limit int, _ time.Duration, keyGen KeyGeneratorFunc, rateLimiterType string) gin.HandlerFunc {
 	config := &RateLimitConfig{
 		Enabled:    true,
 		Type:       rateLimiterType,

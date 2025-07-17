@@ -86,14 +86,17 @@ func (sm *SDKManager) GenerateSDKs(spec *OpenAPISpec) error {
 
 // Go SDK Generator
 
+// GetLanguage retorna a linguagem de programação usada.
 func (g *GoSDKGenerator) GetLanguage() string {
 	return "go"
 }
 
+// GetFileExtension retorna a extensão de arquivo para a linguagem.
 func (g *GoSDKGenerator) GetFileExtension() string {
 	return ".go"
 }
 
+// Generate creates a Go client SDK from the OpenAPI specification
 func (g *GoSDKGenerator) Generate(spec *OpenAPISpec, config *ClientSDKConfig) error {
 	outputDir := filepath.Join(config.OutputDir, "go")
 	if err := os.MkdirAll(outputDir, 0o755); err != nil {
@@ -356,14 +359,17 @@ func (g *GoSDKGenerator) executeTemplate(tmplStr string, data interface{}, outpu
 
 // Python SDK Generator
 
+// GetLanguage retorna a linguagem de programação usada.
 func (p *PythonSDKGenerator) GetLanguage() string {
 	return "python"
 }
 
+// GetFileExtension retorna a extensão de arquivo para a linguagem.
 func (p *PythonSDKGenerator) GetFileExtension() string {
 	return ".py"
 }
 
+// Generate creates a Python client SDK from the OpenAPI specification
 func (p *PythonSDKGenerator) Generate(spec *OpenAPISpec, config *ClientSDKConfig) error {
 	outputDir := filepath.Join(config.OutputDir, "python")
 	if err := os.MkdirAll(outputDir, 0o755); err != nil {
@@ -562,14 +568,17 @@ func (p *PythonSDKGenerator) executeTemplate(tmplStr string, data interface{}, o
 
 // JavaScript SDK Generator
 
+// GetLanguage retorna a linguagem de programação usada.
 func (j *JavaScriptSDKGenerator) GetLanguage() string {
 	return "javascript"
 }
 
+// GetFileExtension retorna a extensão de arquivo para a linguagem.
 func (j *JavaScriptSDKGenerator) GetFileExtension() string {
 	return ".js"
 }
 
+// Generate creates a JavaScript client SDK from the OpenAPI specification
 func (j *JavaScriptSDKGenerator) Generate(spec *OpenAPISpec, config *ClientSDKConfig) error {
 	outputDir := filepath.Join(config.OutputDir, "javascript")
 	if err := os.MkdirAll(outputDir, 0o755); err != nil {
@@ -734,14 +743,17 @@ func (j *JavaScriptSDKGenerator) executeTemplate(tmplStr string, data interface{
 
 // TypeScript SDK Generator
 
+// GetLanguage retorna a linguagem de programação usada.
 func (t *TypeScriptSDKGenerator) GetLanguage() string {
 	return "typescript"
 }
 
+// GetFileExtension retorna a extensão de arquivo para a linguagem.
 func (t *TypeScriptSDKGenerator) GetFileExtension() string {
 	return ".ts"
 }
 
+// Generate creates a TypeScript client SDK from the OpenAPI specification
 func (t *TypeScriptSDKGenerator) Generate(spec *OpenAPISpec, config *ClientSDKConfig) error {
 	outputDir := filepath.Join(config.OutputDir, "typescript")
 	if err := os.MkdirAll(outputDir, 0o755); err != nil {
@@ -933,7 +945,7 @@ func (t *TypeScriptSDKGenerator) executeTemplate(tmplStr string, data interface{
 	return tmpl.Execute(file, data)
 }
 
-// Public function to generate SDKs
+// GenerateClientSDKs generates client SDKs for multiple languages
 func GenerateClientSDKs(config *ClientSDKConfig) error {
 	if !config.Enabled {
 		return nil

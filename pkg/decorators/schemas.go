@@ -100,7 +100,7 @@ func parseStructFields(structType *ast.StructType) []FieldMeta {
 			if field.Tag != nil {
 				tagValue := field.Tag.Value
 				if jsonTag := extractJSONTag(tagValue); jsonTag != "" {
-					fieldMeta.JsonTag = jsonTag
+					fieldMeta.JSONTag = jsonTag
 				}
 
 				// Extract validation tags
@@ -226,8 +226,8 @@ func convertEntityToSchema(entity *EntityMeta) *SchemaInfo {
 
 // getFieldNameForJSON returns the field name to use in JSON (considers json tag)
 func getFieldNameForJSON(field *FieldMeta) string {
-	if field.JsonTag != "" && field.JsonTag != "-" {
-		return field.JsonTag
+	if field.JSONTag != "" && field.JSONTag != "-" {
+		return field.JSONTag
 	}
 	// Convert field name to camelCase if no json tag
 	return strings.ToLower(field.Name[:1]) + field.Name[1:]

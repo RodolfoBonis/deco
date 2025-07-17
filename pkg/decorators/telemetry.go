@@ -366,7 +366,7 @@ func TracingStatsHandler() gin.HandlerFunc {
 }
 
 // createTelemetryMiddleware creates telemetry middleware (for markers.go)
-func createTelemetryMiddleware(args []string) gin.HandlerFunc {
+func createTelemetryMiddleware(_ []string) gin.HandlerFunc {
 	config := DefaultConfig().Telemetry
 	return TracingMiddleware(&config)
 }
