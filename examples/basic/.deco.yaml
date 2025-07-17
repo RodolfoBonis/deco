@@ -1,7 +1,8 @@
 version: "1.0"
 handlers:
     include:
-        - handlers/*.go
+        - '**/*.go'
+        - './*.go'
     exclude:
         - '**/*_test.go'
         - '**/mock_*.go'
@@ -14,7 +15,7 @@ handlers:
 generation: {}
 dev:
     auto_discover: true
-    watch: false
+    watch: true
 prod:
     validate: true
     minify: false
