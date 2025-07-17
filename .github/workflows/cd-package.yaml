@@ -276,9 +276,20 @@ jobs:
           go doc -all ./pkg/decorators > docs/api.md
           
           # Compila o binário para gerar documentação do comando
+          echo "🔨 Compilando binário deco..."
           go build -v -o deco ./cmd/decorate-gen
           
+          # Verifica se o binário foi criado
+          if [ ! -f "./deco" ]; then
+            echo "❌ Erro: Binário deco não foi criado"
+            exit 1
+          fi
+          
+          echo "✅ Binário deco compilado com sucesso"
+          ls -la deco
+          
           # Gera documentação do comando
+          echo "📝 Gerando documentação do comando..."
           ./deco --help > docs/usage.md
           
           # Atualiza README com versão
