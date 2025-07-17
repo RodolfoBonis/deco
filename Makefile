@@ -57,6 +57,11 @@ docs: ## Gera documentação
 	go doc -all ./pkg/decorators > docs/api.md
 	@echo "✅ Documentação gerada em docs/"
 
+docs-readme: ## Gera README da documentação baseado no docs.yaml
+	@echo "📝 Gerando README da documentação..."
+	python .config/scripts/generate_docs_readme.py
+	@echo "✅ README da documentação gerado"
+
 deps: ## Atualiza dependências
 	@echo "📦 Atualizando dependências..."
 	go mod tidy
