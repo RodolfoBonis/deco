@@ -145,7 +145,7 @@ jobs:
 
       - name: Build binary
         run: |
-          go build -v -ldflags="-s -w -X main.version=${{ env.VERSION }}" -o ${{ env.BINARY_NAME }} ./cmd/decorate-gen
+          go build -v -ldflags="-s -w -X main.version=${{ env.VERSION }}" -o ${{ env.BINARY_NAME }} ./cmd/deco
           ./${{ env.BINARY_NAME }} version
 
       - name: Test binary functionality
@@ -199,7 +199,7 @@ jobs:
             
             ### 🔧 Installation
             ```bash
-            go install github.com/RodolfoBonis/deco/cmd/decorate-gen@v${{ env.VERSION }}
+            go install github.com/RodolfoBonis/deco/cmd/deco@v${{ env.VERSION }}
             ```
             
             ### 📋 Changes in this Release:
@@ -277,7 +277,7 @@ jobs:
           
           # Compila o binário para gerar documentação do comando
           echo "🔨 Compilando binário deco..."
-          go build -v -o deco ./cmd/decorate-gen
+          go build -v -o deco ./cmd/deco
           
           # Verifica se o binário foi criado
           if [ ! -f "./deco" ]; then

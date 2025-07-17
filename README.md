@@ -24,7 +24,7 @@ A modern, annotation-driven Go web framework built on top of Gin. Write web APIs
 ### Installation
 
 ```bash
-go install github.com/RodolfoBonis/deco/cmd/decorate-gen@latest
+go install github.com/RodolfoBonis/deco/cmd/deco@latest
 ```
 
 ### Initialize Project

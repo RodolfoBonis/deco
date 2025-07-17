@@ -13,7 +13,7 @@ builds:
       - amd64
       - arm64
     binary: deco
-    main: ./cmd/decorate-gen
+    main: ./cmd/deco
     ldflags:
       - -s -w -X main.version={{.Version}}
     ignore:

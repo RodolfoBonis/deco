@@ -23,7 +23,7 @@ This guide provides detailed examples and usage patterns for all Deco framework 
 
 ```bash
 # Install deco CLI
-go install github.com/RodolfoBonis/deco/cmd/decorate-gen@latest
+go install github.com/RodolfoBonis/deco/cmd/deco@latest
 
 # Initialize new project
 mkdir my-api && cd my-api
