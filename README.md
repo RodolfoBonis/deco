@@ -1,5 +1,11 @@
 # Deco Framework 🚀
 
+  <div align="center">
+    <img src="./docs/images/deco_gopher.png" alt="Go Gopher Artist" width="200" height="200">
+    <br>
+    <em>The Go Gopher decorator, crafting elegant APIs with simple annotations! ✨</em>
+  </div>
+
 A modern, annotation-driven Go web framework built on top of Gin. Write web APIs using simple annotations and let deco handle the heavy lifting - automatic route registration, middleware injection, validation, caching, rate limiting, and more!
 
 ## ✨ Features
