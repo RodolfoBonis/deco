@@ -272,6 +272,55 @@ func init() {
 	{{- range .WebSocketHandlers }}
 	deco.RegisterWebSocketHandler("{{ . }}", {{ if eq $.PackageName "deco" }}handlers.{{ $funcName }}{{ else }}{{ $funcName }}{{ end }})
 	{{- end }}
+	
+	// Register WebSocket handlers as routes for documentation
+	deco.RegisterRouteWithMeta(deco.RouteEntry{
+		Method:      "WS",
+		Path:        "/ws/{{ .FuncName }}",
+		Handler:     {{ if eq $.PackageName "deco" }}handlers.{{ .FuncName }}{{ else }}{{ .FuncName }}{{ end }},
+		FuncName:    "{{ .FuncName }}",
+		PackageName: "{{ .PackageName }}",
+		{{- if .Description }}
+		Description: {{ escapeString .Description }},
+		{{- end }}
+		{{- if .Summary }}
+		Summary:     {{ escapeString .Summary }},
+		{{- end }}
+		{{- if .Tags }}
+		Tags:        []string{
+			{{- range .Tags }}
+			"{{ . }}",
+			{{- end }}
+		},
+		{{- end }}
+		{{- if .MiddlewareInfo }}
+		MiddlewareInfo: []deco.MiddlewareInfo{
+			{{- range .MiddlewareInfo }}
+			{
+				Name:        {{ escapeString .Name }},
+				Description: {{ escapeString .Description }},
+				Args: map[string]interface{}{
+					{{- range $key, $value := .Args }}
+					{{ escapeString $key }}: {{ escapeString $value }},
+					{{- end }}
+				},
+			},
+			{{- end }}
+		},
+		{{- end }}
+		{{- if .Group }}
+		Group: &deco.GroupInfo{
+			Name:        {{ escapeString .Group.Name }},
+			Prefix:      {{ escapeString .Group.Prefix }},
+			Description: {{ escapeString .Group.Description }},
+		},
+		{{- end }}
+		WebSocketHandlers: []string{
+			{{- range .WebSocketHandlers }}
+			"{{ . }}",
+			{{- end }}
+		},
+	})
 {{- end }}
 {{- end }}
 

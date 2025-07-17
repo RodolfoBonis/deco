@@ -197,6 +197,7 @@ func DocsHandler(c *gin.Context) {
         .method-PUT { background: #fff3cd; color: #856404; }
         .method-DELETE { background: #f8d7da; color: #721c24; }
         .method-PATCH { background: #e2e3e5; color: #383d41; }
+        .method-WS { background: #e6f3ff; color: #0066cc; }
         .path {
             font-family: 'Monaco', 'Menlo', monospace;
             font-size: 1.1rem;
