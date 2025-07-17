@@ -1,7 +1,3 @@
-# API Reference
-
-## Package: github.com/RodolfoBonis/deco
-
 package decorators // import "github.com/RodolfoBonis/deco/pkg/decorators"
 
 
