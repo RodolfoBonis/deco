@@ -4,5 +4,5 @@
 
 ### Available Examples:
 
-- [basic](./examples/basic/)
+- [basic](../examples/basic/)
 

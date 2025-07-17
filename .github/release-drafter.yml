@@ -35,7 +35,7 @@ template: |
 
   ### 🔧 Installation
   ```bash
-  go install github.com/RodolfoBonis/deco/cmd/decorate-gen@v$RESOLVED_VERSION
+  go install github.com/RodolfoBonis/deco/cmd/deco@v$RESOLVED_VERSION
   ```
 
   ### 📋 Changes in this Release:

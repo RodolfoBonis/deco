@@ -5,6 +5,7 @@ Welcome to the deco framework documentation!
 ## 📚 Documentation Sections
 
 - [Installation Guide](./installation.md) - How to install and set up deco
+- [Usage Guide](./usage.md) - Complete guide to using decorators and features
 - [CLI Reference](./cli.md) - Command line interface documentation
 - [API Reference](./api.md) - Complete API documentation
 - [Examples](./examples.md) - Code examples and tutorials

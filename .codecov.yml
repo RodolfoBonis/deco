@@ -25,6 +25,6 @@ parsers:
       macro: no
 
 ignore:
-  - "cmd/decorate-gen/main.go"
+  - "cmd/deco/main.go"
   - "examples/**"
   - "**/*_test.go" 

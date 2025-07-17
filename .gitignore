@@ -4,7 +4,8 @@
 *.dll
 *.so
 *.dylib
-deco
+# Ignore deco binary but not cmd/deco directory
+/deco
 
 # Test binary, built with `go test -c`
 *.test

@@ -282,7 +282,7 @@ jobs:
 
       - name: Build binary
         run: |
-          go build -v -o deco ./cmd/decorate-gen
+          go build -v -o deco ./cmd/deco
           ./deco version
 
       - name: Test binary functionality
@@ -390,13 +390,4 @@ jobs:
           fi
           echo "message<<EOF" >> $GITHUB_OUTPUT
           echo "$ESCAPED_MESSAGE" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
-      - name: Send Telegram notification on failure
-        uses: an3park/telegram-action@v1
-        if: ${{ needs.lint_go.result != 'success' || needs.test.result != 'success' || needs.check_vulnerabilities.result != 'success' || needs.build.result != 'success' }}
-        with:
-          chat_id: ${{ secrets.CHAT_ID }}
-          bot_token: ${{ secrets.BOTTOKEN }}
-          message_thread_id: ${{ secrets.THREAD_ID }}
-          message: ${{ steps.generate_error_message.outputs.message }} 
+          echo "EOF" >> $GITHUB_OUTPUT 

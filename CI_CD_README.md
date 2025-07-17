@@ -1,238 +1,238 @@
-# 🔄 CI/CD para Framework deco
+# 🔄 CI/CD for deco Framework
 
-Este documento descreve os fluxos de CI/CD adaptados especificamente para o framework **deco**, que é um package Go, não uma aplicação.
+This document describes the CI/CD flows specifically adapted for the **deco** framework, which is a Go package, not an application.
 
-## 📋 Visão Geral
+## 📋 Overview
 
-O framework deco utiliza fluxos de CI/CD otimizados para packages Go, focando em:
+The deco framework uses CI/CD flows optimized for Go packages, focusing on:
 
-- ✅ **Testes multiplataforma** (Linux, Windows, macOS)
-- ✅ **Linting e validação de código**
-- ✅ **Verificação de segurança**
-- ✅ **Build e distribuição de binários**
-- ✅ **Publicação no Go Proxy**
-- ✅ **Geração automática de documentação**
+- ✅ **Multi-platform testing** (Linux, Windows, macOS)
+- ✅ **Code linting and validation**
+- ✅ **Security verification**
+- ✅ **Binary build and distribution**
+- ✅ **Go Proxy publication**
+- ✅ **Automatic documentation generation**
 - ✅ **Release management**
 
-## 🚀 Workflows Disponíveis
+## 🚀 Available Workflows
 
 ### 1. CI Package (`.github/workflows/ci-package.yaml`)
 
-**Trigger:** Push para `main` ou Pull Requests
+**Trigger:** Push to `main` or Pull Requests
 
 **Jobs:**
-- **test**: Testes em múltiplas plataformas e versões do Go
-- **lint**: Linting com golangci-lint, goimports, go vet
-- **security**: Verificação de vulnerabilidades com govulncheck
-- **build**: Build do binário em múltiplas plataformas
-- **validate**: Validação do go.mod e dependências
-- **notify**: Notificações via Telegram
+- **test**: Tests on multiple platforms and Go versions
+- **lint**: Linting with golangci-lint, goimports, go vet
+- **security**: Vulnerability checking with govulncheck
+- **build**: Binary build on multiple platforms
+- **validate**: go.mod and dependencies validation
+- **notify**: Telegram notifications
 
 ### 2. CD Package (`.github/workflows/cd-package.yaml`)
 
-**Trigger:** Após CI Package bem-sucedido na branch `main`
+**Trigger:** After successful CI Package on `main` branch
 
 **Jobs:**
-- **get_commit_messages**: Coleta informações dos commits
-- **build_and_release**: Build, versionamento e criação de release
-- **publish_to_go_proxy**: Publicação no Go Proxy
-- **generate_documentation**: Atualização automática de documentação
-- **notify**: Notificações de sucesso/erro
+- **get_commit_messages**: Collect commit information
+- **build_and_release**: Build, versioning and release creation
+- **publish_to_go_proxy**: Publication to Go Proxy
+- **generate_documentation**: Automatic documentation update
+- **notify**: Success/error notifications
 
 ### 3. Documentation (`.github/workflows/docs.yaml`)
 
-**Trigger:** Mudanças em arquivos de código ou documentação
+**Trigger:** Changes in code files or documentation
 
 **Jobs:**
-- **generate_docs**: Geração automática de documentação
-- **validate_docs**: Validação da documentação gerada
-- **update_main_readme**: Atualização do README principal
-- **notify**: Notificações de atualização de docs
+- **generate_docs**: Automatic documentation generation
+- **validate_docs**: Generated documentation validation
+- **update_main_readme**: Main README update
+- **notify**: Documentation update notifications
 
 ### 4. Release Drafter (`.github/workflows/release-drafter.yml`)
 
-**Trigger:** Push para `main` ou Pull Requests
+**Trigger:** Push to `main` or Pull Requests
 
 **Jobs:**
-- **update_release_draft**: Geração automática de notas de release
+- **update_release_draft**: Automatic release notes generation
 
-## 🔧 Configurações
+## 🔧 Configurations
 
 ### GolangCI-Lint (`.golangci.yml`)
 
 ```yaml
-# Linters habilitados
+# Enabled linters
 - gofmt, goimports, govet
 - staticcheck, gosimple, ineffassign
 - unused, misspell, gosec
 - errcheck, gocritic
 
-# Configurações específicas
-- Timeout: 5 minutos
+# Specific settings
+- Timeout: 5 minutes
 - Go version: 1.23
-- Exclusões para arquivos de teste
+- Exclusions for test files
 ```
 
 ### Codecov (`.codecov.yml`)
 
 ```yaml
-# Configurações de cobertura
+# Coverage settings
 - Target: 80%
 - Threshold: 5%
-- Ignora: main.go, exemplos, testes
+- Ignore: main.go, examples, tests
 ```
 
 ### Dependabot (`.github/dependabot.yml`)
 
 ```yaml
-# Atualizações automáticas
-- Go modules: Semanal
-- GitHub Actions: Semanal
-- Ignora atualizações major de dependências críticas
+# Automatic updates
+- Go modules: Weekly
+- GitHub Actions: Weekly
+- Ignore major updates of critical dependencies
 ```
 
-## 📦 Processo de Release
+## 📦 Release Process
 
-### 1. Versionamento Automático
+### 1. Automatic Versioning
 
 ```bash
-# Incremento automático de versão
+# Automatic version increment
 ./.config/scripts/increment_version.sh
 ```
 
-### 2. Build Multiplataforma
+### 2. Multi-platform Build
 
 ```bash
-# Build para Linux, Windows, macOS
-go build -ldflags="-s -w -X main.version=$VERSION" -o deco ./cmd/decorate-gen
+# Build for Linux, Windows, macOS
+go build -ldflags="-s -w -X main.version=$VERSION" -o deco ./cmd/deco
 ```
 
-### 3. Distribuição
+### 3. Distribution
 
-- **GitHub Releases**: Binários para download
-- **Go Proxy**: Package disponível via `go install`
-- **Documentação**: Atualizada automaticamente
+- **GitHub Releases**: Binaries for download
+- **Go Proxy**: Package available via `go install`
+- **Documentation**: Automatically updated
 
-### 4. Instalação
+### 4. Installation
 
 ```bash
-# Instalação da versão mais recente
-go install github.com/RodolfoBonis/deco/cmd/decorate-gen@latest
+# Install latest version
+go install github.com/RodolfoBonis/deco/cmd/deco@latest
 
-# Instalação de versão específica
-go install github.com/RodolfoBonis/deco/cmd/decorate-gen@v1.0.0
+# Install specific version
+go install github.com/RodolfoBonis/deco/cmd/deco@v1.0.0
 ```
 
-## 🛠️ Comandos Locais
+## 🛠️ Local Commands
 
 ### Makefile
 
 ```bash
-# Ver todos os comandos disponíveis
+# See all available commands
 make help
 
-# Pipeline completo
+# Complete pipeline
 make all
 
-# Apenas build
+# Build only
 make build
 
-# Testes com cobertura
+# Tests with coverage
 make test-coverage
 
 # Linting
 make lint
 
-# Verificação de segurança
+# Security check
 make security
 
-# Modo desenvolvimento
+# Development mode
 make dev
 ```
 
-### Comandos Manuais
+### Manual Commands
 
 ```bash
-# Build local
-go build -o deco ./cmd/decorate-gen
+# Local build
+go build -o deco ./cmd/deco
 
-# Testes
+# Tests
 go test -v -race ./...
 
 # Linting
 golangci-lint run
 
-# Verificação de segurança
+# Security check
 govulncheck ./...
 
-# Geração de documentação
+# Documentation generation
 go doc -all ./pkg/decorators > docs/api.md
 ```
 
-## 🔍 Monitoramento
+## 🔍 Monitoring
 
-### Notificações Telegram
+### Telegram Notifications
 
-- ✅ **Sucesso**: Detalhes do release, versão, links
-- ❌ **Erro**: Informações de debug, logs, troubleshooting
-- 📚 **Documentação**: Status de atualização de docs
+- ✅ **Success**: Release details, version, links
+- ❌ **Error**: Debug information, logs, troubleshooting
+- 📚 **Documentation**: Documentation update status
 
-### Métricas
+### Metrics
 
-- **Cobertura de testes**: Target 80%
-- **Tempo de build**: Monitorado por job
-- **Vulnerabilidades**: Bloqueia release se encontradas
+- **Test coverage**: Target 80%
+- **Build time**: Monitored per job
+- **Vulnerabilities**: Blocks release if found
 
 ## 🚨 Troubleshooting
 
-### Problemas Comuns
+### Common Issues
 
-1. **Build falha em Windows/macOS**
-   - Verificar compatibilidade de código
-   - Testar localmente em diferentes OS
+1. **Build fails on Windows/macOS**
+   - Check code compatibility
+   - Test locally on different OS
 
-2. **Linting falha**
-   - Executar `make lint-fix`
-   - Verificar configuração do golangci-lint
+2. **Linting fails**
+   - Run `make lint-fix`
+   - Check golangci-lint configuration
 
-3. **Vulnerabilidades detectadas**
-   - Atualizar dependências
-   - Verificar se são falsos positivos
+3. **Vulnerabilities detected**
+   - Update dependencies
+   - Check if they are false positives
 
-4. **Documentação não gera**
-   - Verificar se o binário compila
-   - Checar permissões de escrita
+4. **Documentation doesn't generate**
+   - Check if binary compiles
+   - Check write permissions
 
-### Logs e Debug
+### Logs and Debug
 
 ```bash
-# Ver logs detalhados do CI
+# See detailed CI logs
 # GitHub Actions > Workflows > [Workflow] > [Job] > [Step]
 
-# Testar localmente
+# Test locally
 make all
 
-# Verificar configurações
+# Check configurations
 cat .golangci.yml
 cat .codecov.yml
 ```
 
-## 🔗 Links Úteis
+## 🔗 Useful Links
 
 - [GitHub Actions](https://github.com/RodolfoBonis/deco/actions)
 - [Releases](https://github.com/RodolfoBonis/deco/releases)
 - [Go Package](https://pkg.go.dev/github.com/RodolfoBonis/deco)
-- [Documentação](https://github.com/RodolfoBonis/deco/tree/main/docs)
+- [Documentation](https://github.com/RodolfoBonis/deco/tree/main/docs)
 
-## 📝 Notas Importantes
+## 📝 Important Notes
 
-1. **Não é uma aplicação**: Este framework não é deployado na AWS
-2. **Package Go**: Foco em distribuição via Go Proxy
-3. **Binário CLI**: O produto principal é um comando CLI
-4. **Multiplataforma**: Build para Linux, Windows, macOS
-5. **Documentação**: Gerada automaticamente a cada mudança
+1. **Not an application**: This framework is not deployed to AWS
+2. **Go Package**: Focus on distribution via Go Proxy
+3. **CLI Binary**: The main product is a CLI command
+4. **Multi-platform**: Build for Linux, Windows, macOS
+5. **Documentation**: Automatically generated on each change
 
 ---
 
-**Última atualização:** $(date)
-**Versão do framework:** $(cat version.txt 2>/dev/null || echo "dev") 
+**Last updated:** $(date)
+**Framework version:** $(cat version.txt 2>/dev/null || echo "dev") 

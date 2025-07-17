@@ -48,7 +48,7 @@ jobs:
 
       - name: Build binary for documentation
         run: |
-          go build -v -o deco ./cmd/decorate-gen
+          go build -v -o deco ./cmd/deco
 
       - name: Create docs directory
         run: mkdir -p docs
@@ -94,10 +94,41 @@ jobs:
             for example in examples/*/; do
               if [ -d "$example" ]; then
                 example_name=$(basename "$example")
-                echo "- [$example_name](./examples/$example_name/)" >> docs/examples.md
+                echo "- [$example_name](../examples/$example_name/)" >> docs/examples.md
               fi
             done
             echo "" >> docs/examples.md
+          fi
+
+      - name: Generate usage documentation
+        run: |
+          # Copy and adapt content from USAGE.md
+          if [ -f "USAGE.md" ]; then
+            # Copy the content and adapt it for docs/usage.md
+            cp USAGE.md docs/usage.md
+            
+            # Update the title to match docs format
+            sed -i '1s/.*/# deco Framework Usage Guide/' docs/usage.md
+            
+            # Add a note about the source
+            echo "" >> docs/usage.md
+            echo "---" >> docs/usage.md
+            echo "*This documentation is automatically generated from the main USAGE.md file.*" >> docs/usage.md
+          else
+            # Fallback if USAGE.md doesn't exist
+            echo "# deco Framework Usage Guide" > docs/usage.md
+            echo "" >> docs/usage.md
+            echo "The **deco** is an annotation-based framework for Gin that simplifies REST API and WebSocket development in Go." >> docs/usage.md
+            echo "" >> docs/usage.md
+            echo "## 📋 Quick Start" >> docs/usage.md
+            echo "" >> docs/usage.md
+            echo "1. **Install CLI:** \`go install github.com/RodolfoBonis/deco/cmd/deco@latest\`" >> docs/usage.md
+            echo "2. **Initialize project:** \`deco init\`" >> docs/usage.md
+            echo "3. **Create handlers** with appropriate decorators" >> docs/usage.md
+            echo "4. **Generate code:** \`deco\`" >> docs/usage.md
+            echo "5. **Run application:** \`go run main.go\`" >> docs/usage.md
+            echo "" >> docs/usage.md
+            echo "For complete documentation, see the main [USAGE.md](../USAGE.md) file." >> docs/usage.md
           fi
 
       - name: Generate installation guide
@@ -111,7 +142,7 @@ jobs:
           echo "" >> docs/installation.md
           echo "### Install the CLI tool" >> docs/installation.md
           echo '```bash' >> docs/installation.md
-          echo 'go install github.com/RodolfoBonis/deco/cmd/decorate-gen@latest' >> docs/installation.md
+          echo 'go install github.com/RodolfoBonis/deco/cmd/deco@latest' >> docs/installation.md
           echo '```' >> docs/installation.md
           echo "" >> docs/installation.md
           echo "### Initialize a new project" >> docs/installation.md
@@ -143,6 +174,7 @@ jobs:
           echo "## 📚 Documentation Sections" >> docs/README.md
           echo "" >> docs/README.md
           echo "- [Installation Guide](./installation.md) - How to install and set up deco" >> docs/README.md
+          echo "- [Usage Guide](./usage.md) - Complete guide to using decorators and features" >> docs/README.md
           echo "- [CLI Reference](./cli.md) - Command line interface documentation" >> docs/README.md
           echo "- [API Reference](./api.md) - Complete API documentation" >> docs/README.md
           echo "- [Examples](./examples.md) - Code examples and tutorials" >> docs/README.md
@@ -258,6 +290,7 @@ jobs:
             ✅ Documentation validation: Success
             
             📖 *Updated sections:*
+            • Usage Guide
             • API Reference
             • CLI Reference
             • Installation Guide

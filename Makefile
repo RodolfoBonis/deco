@@ -2,7 +2,7 @@
 
 # Variáveis
 BINARY_NAME=deco
-MAIN_PATH=./cmd/decorate-gen
+MAIN_PATH=./cmd/deco
 VERSION=$(shell cat version.txt 2>/dev/null || echo "dev")
 
 help: ## Mostra esta ajuda

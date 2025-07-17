@@ -7,7 +7,7 @@
 
 ### Install the CLI tool
 ```bash
-go install github.com/RodolfoBonis/deco/cmd/decorate-gen@latest
+go install github.com/RodolfoBonis/deco/cmd/deco@latest
 ```
 
 ### Initialize a new project
