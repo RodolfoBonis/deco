@@ -15,5 +15,7 @@ func main() {
 	// - http://localhost:8080/api/users
 	// - http://localhost:8080/decorators/docs (documentação)
 	// - http://localhost:8080/demo/websocket (teste WebSocket)
-	r.Run(":8080")
+	if err := r.Run(":8080"); err != nil {
+		panic(err)
+	}
 }

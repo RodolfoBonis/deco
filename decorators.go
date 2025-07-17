@@ -65,6 +65,8 @@ type (
 	GroupInfo = decorators.GroupInfo
 
 	// Hooks
-	ParserHook    = decorators.ParserHook
+	// ParserHook is an alias for decorators.ParserHook. Represents a hook for custom parsing logic.
+	ParserHook = decorators.ParserHook
+	// GeneratorHook represents a hook for custom generation logic
 	GeneratorHook = decorators.GeneratorHook
 )

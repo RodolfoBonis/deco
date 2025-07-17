@@ -71,7 +71,7 @@ type LiveUpdateData struct {
 var (
 	activeUsers = make(map[string]*PresenceInfo)
 	chatRooms   = make(map[string][]string) // room -> user_ids
-	onlineCount = 0
+	_           = 0                         // onlineCount placeholder for future use
 )
 
 // =============================================================================
@@ -569,7 +569,7 @@ func broadcastToAll(message *decorators.WebSocketMessage) {
 // =============================================================================
 // WebSocket Message Handlers (New Pattern)
 // =============================================================================
-// HandleChatMessage handles chat-type WebSocket messages
+// HandleChatMessage processes chat messages received via WebSocket.
 // @WebSocket("chat")
 func HandleChatMessage(conn *decorators.WebSocketConnection, message *decorators.WebSocketMessage) error {
 	log.Printf("📱 Chat message received and processed: %+v", message.Data)
@@ -586,7 +586,9 @@ func HandleChatMessage(conn *decorators.WebSocketConnection, message *decorators
 			// Join room if not already joined
 			hub := decorators.GetWebSocketHub()
 			if hub != nil {
-				hub.JoinGroup(conn.ID, room)
+				if err := hub.JoinGroup(conn.ID, room); err != nil {
+					log.Printf("Error joining group %s: %v", room, err)
+				}
 
 				// Create formatted chat message
 				chatMsg := &decorators.WebSocketMessage{
