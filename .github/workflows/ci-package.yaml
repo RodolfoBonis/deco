@@ -62,25 +62,27 @@ jobs:
       - name: Download dependencies
         run: go mod download
 
-      - name: Install Lint Dependencies
+      - name: Install golangci-lint
         run: |
           go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
-          go install honnef.co/go/tools/cmd/staticcheck@latest
-          go install golang.org/x/tools/cmd/goimports@latest
           export PATH=$PATH:$(go env GOPATH)/bin
 
       - name: Run lint
         id: lint
         run: |
-          if [ -f .config/scripts/lint.sh ]; then
-            chmod +x .config/scripts/lint.sh
-            export PATH=$PATH:$(go env GOPATH)/bin
-            set +e
-            ./.config/scripts/lint.sh > lint_output.txt 2>&1
-            echo "status=$?" >> $GITHUB_OUTPUT
-            set -e
+          export PATH=$PATH:$(go env GOPATH)/bin
+          set +e
+          golangci-lint run --timeout=5m > lint_output.txt 2>&1
+          LINT_EXIT_CODE=$?
+          echo "status=$LINT_EXIT_CODE" >> $GITHUB_OUTPUT
+          set -e
+          
+          # Se houve erros de lint, mostrar o output
+          if [ $LINT_EXIT_CODE -ne 0 ]; then
+            echo "❌ Lint errors found:"
+            cat lint_output.txt
           else
-            echo "status=0" >> $GITHUB_OUTPUT
+            echo "✅ No lint errors found"
           fi
 
       - name: Install Python dependencies for comment
