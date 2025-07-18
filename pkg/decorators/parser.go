@@ -407,7 +407,7 @@ func processMiddlewares(route *RouteMeta) error {
 	// Process each marker
 	for _, marker := range route.Markers {
 		switch marker.Name {
-		case "Auth", "Cache", "RateLimit", "Metrics", "CORS", "WebSocketStats":
+		case "Auth", "Cache", "RateLimit", "Metrics", "CORS", "WebSocketStats", "Proxy", "Security":
 			// Traditional middlewares
 			call := generateMiddlewareCall(marker)
 			if call != "" {
@@ -596,6 +596,7 @@ func getMiddlewareDescription(name string) string {
 		"CORS":           "Middleware de Cross-Origin Resource Sharing",
 		"WebSocket":      "Middleware de upgrade para conexão WebSocket",
 		"WebSocketStats": "Middleware de estatísticas WebSocket",
+		"Proxy":          "Middleware de proxy reverso com service discovery e load balancing",
 	}
 
 	if desc, exists := descriptions[name]; exists {
@@ -648,6 +649,18 @@ func generateMiddlewareCall(marker MarkerInstance) string {
 			return fmt.Sprintf(`deco.CreateWebSocketStatsMiddleware(%q)`, strings.Join(marker.Args, ","))
 		}
 		return `deco.CreateWebSocketStatsMiddleware("")`
+
+	case "Proxy":
+		if len(marker.Args) > 0 {
+			return fmt.Sprintf(`deco.CreateProxyMiddleware(%q)`, strings.Join(marker.Args, ","))
+		}
+		return `deco.CreateProxyMiddleware("")`
+
+	case "Security":
+		if len(marker.Args) > 0 {
+			return fmt.Sprintf(`deco.CreateSecurityMiddleware(%q)`, strings.Join(marker.Args, ","))
+		}
+		return `deco.CreateSecurityMiddleware("")`
 	}
 
 	return ""
@@ -699,5 +712,19 @@ func CreateWebSocketMiddleware(args string) gin.HandlerFunc {
 func CreateWebSocketStatsMiddleware(args string) gin.HandlerFunc {
 	argsSlice := parseArguments(args)
 	config := GetMarkers()["WebSocketStats"]
+	return config.Factory(argsSlice)
+}
+
+// CreateProxyMiddleware creates proxy middleware (wrapper for generation)
+func CreateProxyMiddleware(args string) gin.HandlerFunc {
+	argsSlice := parseArguments(args)
+	config := GetMarkers()["Proxy"]
+	return config.Factory(argsSlice)
+}
+
+// CreateSecurityMiddleware creates security middleware (wrapper for generation)
+func CreateSecurityMiddleware(args string) gin.HandlerFunc {
+	argsSlice := parseArguments(args)
+	config := GetMarkers()["Security"]
 	return config.Factory(argsSlice)
 }

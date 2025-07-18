@@ -137,9 +137,14 @@ func GenerateInitFileWithConfig(rootDir, outputPath, pkgName string, config *Con
 	// Count statistics
 	wsHandlerCount := 0
 	middlewareCount := 0
+	proxyCount := 0
 	for _, route := range routes {
 		wsHandlerCount += len(route.WebSocketHandlers)
 		for _, marker := range route.Markers {
+			if marker.Name == "Proxy" {
+				proxyCount++
+				LogVerbose("🔍 Found Proxy marker in route: %s", route.FuncName)
+			}
 			if marker.Name != "Route" && marker.Name != "Summary" && marker.Name != "Description" &&
 				marker.Name != "Tag" && marker.Name != "Response" && marker.Name != "RequestBody" &&
 				marker.Name != "Schema" && marker.Name != "Group" && marker.Name != "Param" {
@@ -149,7 +154,7 @@ func GenerateInitFileWithConfig(rootDir, outputPath, pkgName string, config *Con
 	}
 
 	// Essential logs only
-	LogNormal("Code generated: %d routes, %d websockets, %d middlewares processed", len(routes), wsHandlerCount, middlewareCount)
+	LogNormal("Code generated: %d routes, %d websockets, %d middlewares, %d proxies processed", len(routes), wsHandlerCount, middlewareCount, proxyCount)
 
 	// Detailed logs only in verbose mode
 	LogVerbose("✅ File generated successfully: %s", outputPath)

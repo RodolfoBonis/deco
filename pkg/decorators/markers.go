@@ -199,6 +199,18 @@ func initDefaultMarkers() {
 	})
 
 	RegisterMarker(MarkerConfig{
+		Name:    "Proxy",
+		Pattern: regexp.MustCompile(`@Proxy\s*\(([^)]*)\)`),
+		Factory: createProxyMiddleware,
+	})
+
+	RegisterMarker(MarkerConfig{
+		Name:    "Security",
+		Pattern: regexp.MustCompile(`@Security\s*\(([^)]*)\)`),
+		Factory: createSecurityMiddleware,
+	})
+
+	RegisterMarker(MarkerConfig{
 		Name:    "CORS",
 		Pattern: regexp.MustCompile(`@CORS\s*\(([^)]*)\)`),
 		Factory: createCORSMiddleware,
@@ -618,4 +630,34 @@ func createInstrumentedHandlerMiddleware(args []string) gin.HandlerFunc {
 	return InstrumentedHandler(handlerName, func(c *gin.Context) {
 		c.Next()
 	})
+}
+
+// createSecurityMiddleware creates security middleware
+func createSecurityMiddleware(args []string) gin.HandlerFunc {
+	// Default to localhost only
+	config := DefaultSecurityConfig()
+
+	for _, arg := range args {
+		switch {
+		case strings.HasPrefix(arg, "networks="):
+			networks := strings.TrimPrefix(arg, "networks=")
+			config.AllowedNetworks = strings.Split(networks, ",")
+		case strings.HasPrefix(arg, "ips="):
+			ips := strings.TrimPrefix(arg, "ips=")
+			config.AllowedIPs = strings.Split(ips, ",")
+		case strings.HasPrefix(arg, "hosts="):
+			hosts := strings.TrimPrefix(arg, "hosts=")
+			config.AllowedHosts = strings.Split(hosts, ",")
+		case arg == "private":
+			config.AllowPrivateNetworks = true
+		case arg == "localhost":
+			config.AllowLocalhost = true
+		case strings.HasPrefix(arg, "message="):
+			config.ErrorMessage = strings.TrimPrefix(arg, "message=")
+		case arg == "nolog":
+			config.LogBlockedAttempts = false
+		}
+	}
+
+	return SecureInternalEndpoints(config)
 }

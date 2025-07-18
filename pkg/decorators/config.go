@@ -13,20 +13,21 @@ import (
 
 // Config framework configuration structure
 type Config struct {
-	Version    string           `yaml:"version"`
-	Handlers   HandlersConfig   `yaml:"handlers"`
-	Generate   GenerationConfig `yaml:"generation"`
-	Dev        DevConfig        `yaml:"dev"`
-	Prod       ProdConfig       `yaml:"prod"`
-	Redis      RedisConfig      `yaml:"redis,omitempty"`
-	Cache      CacheConfig      `yaml:"cache,omitempty"`
-	RateLimit  RateLimitConfig  `yaml:"rate_limit,omitempty"`
-	Metrics    MetricsConfig    `yaml:"metrics,omitempty"`
-	OpenAPI    OpenAPIConfig    `yaml:"openapi,omitempty"`
-	Validation ValidationConfig `yaml:"validation,omitempty"`
-	WebSocket  WebSocketConfig  `yaml:"websocket,omitempty"`
-	Telemetry  TelemetryConfig  `yaml:"telemetry,omitempty"`
-	ClientSDK  ClientSDKConfig  `yaml:"client_sdk,omitempty"`
+	Version    string              `yaml:"version"`
+	Handlers   HandlersConfig      `yaml:"handlers"`
+	Generate   GenerationConfig    `yaml:"generation"`
+	Dev        DevConfig           `yaml:"dev"`
+	Prod       ProdConfig          `yaml:"prod"`
+	Redis      RedisConfig         `yaml:"redis,omitempty"`
+	Cache      CacheConfig         `yaml:"cache,omitempty"`
+	RateLimit  RateLimitConfig     `yaml:"rate_limit,omitempty"`
+	Metrics    MetricsConfig       `yaml:"metrics,omitempty"`
+	OpenAPI    OpenAPIConfig       `yaml:"openapi,omitempty"`
+	Validation ValidationConfig    `yaml:"validation,omitempty"`
+	WebSocket  WebSocketConfig     `yaml:"websocket,omitempty"`
+	Telemetry  TelemetryConfig     `yaml:"telemetry,omitempty"`
+	ClientSDK  ClientSDKConfig     `yaml:"client_sdk,omitempty"`
+	Proxy      ProxyConfigSettings `yaml:"proxy,omitempty"`
 }
 
 // HandlersConfig configuration for handlers discovery
@@ -140,6 +141,78 @@ type ClientSDKConfig struct {
 	ModuleName  string   `yaml:"module_name,omitempty"`
 }
 
+// ProxyConfigSettings configuration for proxy functionality
+type ProxyConfigSettings struct {
+	Enabled bool `yaml:"enabled"`
+
+	// Service Discovery
+	ServiceDiscovery ServiceDiscoveryConfig `yaml:"service_discovery"`
+
+	// Load Balancing
+	LoadBalancing LoadBalancingConfig `yaml:"load_balancing"`
+
+	// Circuit Breaker
+	CircuitBreaker CircuitBreakerConfig `yaml:"circuit_breaker"`
+
+	// Retry
+	Retry RetryConfig `yaml:"retry"`
+
+	// HTTP Client
+	HTTPClient HTTPClientConfig `yaml:"http_client"`
+}
+
+// ServiceDiscoveryConfig configuration for service discovery
+type ServiceDiscoveryConfig struct {
+	Consul     ConsulConfig     `yaml:"consul"`
+	Kubernetes KubernetesConfig `yaml:"kubernetes"`
+	DNS        DNSConfig        `yaml:"dns"`
+}
+
+// ConsulConfig configuration for Consul service discovery
+type ConsulConfig struct {
+	Enabled    bool   `yaml:"enabled"`
+	Address    string `yaml:"address"`
+	Datacenter string `yaml:"datacenter"`
+}
+
+// KubernetesConfig configuration for Kubernetes service discovery
+type KubernetesConfig struct {
+	Enabled bool `yaml:"enabled"`
+}
+
+// DNSConfig configuration for DNS service discovery
+type DNSConfig struct {
+	Enabled bool `yaml:"enabled"`
+}
+
+// LoadBalancingConfig configuration for load balancing
+type LoadBalancingConfig struct {
+	DefaultAlgorithm    string `yaml:"default_algorithm"`
+	HealthCheckInterval string `yaml:"health_check_interval"`
+	HealthCheckTimeout  string `yaml:"health_check_timeout"`
+}
+
+// CircuitBreakerConfig configuration for circuit breaker
+type CircuitBreakerConfig struct {
+	Enabled                 bool   `yaml:"enabled"`
+	DefaultFailureThreshold int    `yaml:"default_failure_threshold"`
+	DefaultRecoveryTimeout  string `yaml:"default_recovery_timeout"`
+}
+
+// RetryConfig configuration for retry logic
+type RetryConfig struct {
+	DefaultAttempts int    `yaml:"default_attempts"`
+	DefaultBackoff  string `yaml:"default_backoff"`
+	DefaultDelay    string `yaml:"default_delay"`
+}
+
+// HTTPClientConfig configuration for HTTP client
+type HTTPClientConfig struct {
+	Timeout         string `yaml:"timeout"`
+	MaxIdleConns    int    `yaml:"max_idle_conns"`
+	IdleConnTimeout string `yaml:"idle_conn_timeout"`
+}
+
 // DefaultConfig returns default configuration
 func DefaultConfig() *Config {
 	return &Config{
@@ -236,6 +309,42 @@ func DefaultConfig() *Config {
 			OutputDir:   "./sdk",
 			Languages:   []string{"go"},
 			PackageName: "client",
+		},
+		Proxy: ProxyConfigSettings{
+			Enabled: true,
+			ServiceDiscovery: ServiceDiscoveryConfig{
+				Consul: ConsulConfig{
+					Enabled:    false,
+					Address:    "localhost:8500",
+					Datacenter: "dc1",
+				},
+				Kubernetes: KubernetesConfig{
+					Enabled: false,
+				},
+				DNS: DNSConfig{
+					Enabled: true,
+				},
+			},
+			LoadBalancing: LoadBalancingConfig{
+				DefaultAlgorithm:    "round_robin",
+				HealthCheckInterval: "30s",
+				HealthCheckTimeout:  "5s",
+			},
+			CircuitBreaker: CircuitBreakerConfig{
+				Enabled:                 true,
+				DefaultFailureThreshold: 5,
+				DefaultRecoveryTimeout:  "30s",
+			},
+			Retry: RetryConfig{
+				DefaultAttempts: 3,
+				DefaultBackoff:  "exponential",
+				DefaultDelay:    "1s",
+			},
+			HTTPClient: HTTPClientConfig{
+				Timeout:         "10s",
+				MaxIdleConns:    100,
+				IdleConnTimeout: "90s",
+			},
 		},
 	}
 }
@@ -359,6 +468,11 @@ func applyDefaults(config *Config) {
 	// Apply defaults for ClientSDK
 	if config.ClientSDK.OutputDir == "" {
 		config.ClientSDK = defaults.ClientSDK
+	}
+
+	// Apply defaults for Proxy
+	if !config.Proxy.Enabled {
+		config.Proxy = defaults.Proxy
 	}
 }
 

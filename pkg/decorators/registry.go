@@ -117,16 +117,29 @@ func RegisterRouteWithMeta(entry *RouteEntry) {
 
 // Default creates a gin.Engine with all registered routes
 func Default() *gin.Engine {
+	return DefaultWithSecurity(nil)
+}
+
+// DefaultWithSecurity creates a gin.Engine with security configuration for internal endpoints
+func DefaultWithSecurity(securityConfig *SecurityConfig) *gin.Engine {
 	r := gin.Default()
 
-	// Register documentation routes
+	// Use default security config if not provided
+	if securityConfig == nil {
+		securityConfig = DefaultSecurityConfig()
+	}
+
+	// Create security middleware for internal endpoints
+	securityMiddleware := SecureInternalEndpoints(securityConfig)
+
+	// Register documentation routes with security
 	config := DefaultConfig()
-	r.GET("/decorators/docs", DocsHandler)
-	r.GET("/decorators/docs.json", DocsJSONHandler)
-	r.GET("/decorators/openapi.json", OpenAPIJSONHandler(config))
-	r.GET("/decorators/openapi.yaml", OpenAPIYAMLHandler(config))
-	r.GET("/decorators/swagger-ui", SwaggerUIHandler(config))
-	r.GET("/decorators/swagger", SwaggerRedirectHandler)
+	r.GET("/decorators/docs", securityMiddleware, DocsHandler)
+	r.GET("/decorators/docs.json", securityMiddleware, DocsJSONHandler)
+	r.GET("/decorators/openapi.json", securityMiddleware, OpenAPIJSONHandler(config))
+	r.GET("/decorators/openapi.yaml", securityMiddleware, OpenAPIYAMLHandler(config))
+	r.GET("/decorators/swagger-ui", securityMiddleware, SwaggerUIHandler(config))
+	r.GET("/decorators/swagger", securityMiddleware, SwaggerRedirectHandler)
 
 	// Register all framework routes
 	for i := range routes {

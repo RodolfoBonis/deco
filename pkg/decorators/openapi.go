@@ -808,24 +808,17 @@ func OpenAPIYAMLHandler(config *Config) gin.HandlerFunc {
 func SwaggerUIHandler(config *Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Use config to customize Swagger UI settings
-		swaggerURL := "/swagger/doc.json"
-		if config.OpenAPI.BasePath != "" {
-			swaggerURL = config.OpenAPI.BasePath + swaggerURL
-		}
+		swaggerURL := "/decorators/openapi.json"
+		// Don't add BasePath for internal endpoints
 
 		// Customize Swagger UI HTML based on config
-		html := fmt.Sprintf(`
+		htmlTemplate := `
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>%s - API Documentation</title>
+    <title>API Documentation</title>
     <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@4.15.5/swagger-ui.css" />
-    <style>
-        html { box-sizing: border-box; overflow: -moz-scrollbars-vertical; overflow-y: scroll; }
-        *, *:before, *:after { box-sizing: inherit; }
-        body { margin:0; background: #fafafa; }
-    </style>
 </head>
 <body>
     <div id="swagger-ui"></div>
@@ -834,7 +827,7 @@ func SwaggerUIHandler(config *Config) gin.HandlerFunc {
     <script>
         window.onload = function() {
             const ui = SwaggerUIBundle({
-                url: '%s',
+                url: '{{SWAGGER_URL}}',
                 dom_id: '#swagger-ui',
                 deepLinking: true,
                 presets: [
@@ -858,7 +851,10 @@ func SwaggerUIHandler(config *Config) gin.HandlerFunc {
         };
     </script>
 </body>
-</html>`, config.OpenAPI.Title, swaggerURL)
+</html>`
+
+		// Replace placeholder with actual URL
+		html := strings.Replace(htmlTemplate, "{{SWAGGER_URL}}", swaggerURL, 1)
 
 		c.Header("Content-Type", "text/html; charset=utf-8")
 		c.String(http.StatusOK, html)

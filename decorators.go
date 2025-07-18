@@ -11,6 +11,7 @@ var (
 	RegisterRouteWithMeta = decorators.RegisterRouteWithMeta
 	RegisterGroup         = decorators.RegisterGroup
 	Default               = decorators.Default
+	DefaultWithSecurity   = decorators.DefaultWithSecurity
 	GetRoutes             = decorators.GetRoutes
 	GetGroups             = decorators.GetGroups
 
@@ -30,6 +31,27 @@ var (
 	CreateCORSMiddleware           = decorators.CreateCORSMiddleware
 	CreateWebSocketMiddleware      = decorators.CreateWebSocketMiddleware
 	CreateWebSocketStatsMiddleware = decorators.CreateWebSocketStatsMiddleware
+	CreateProxyMiddleware          = decorators.CreateProxyMiddleware
+	CreateSecurityMiddleware       = decorators.CreateSecurityMiddleware
+
+	// Funções de segurança
+	SecureInternalEndpoints = decorators.SecureInternalEndpoints
+	AllowLocalhostOnly      = decorators.AllowLocalhostOnly
+	AllowPrivateNetworks    = decorators.AllowPrivateNetworks
+	AllowSpecificNetworks   = decorators.AllowSpecificNetworks
+	AllowSpecificIPs        = decorators.AllowSpecificIPs
+	DefaultSecurityConfig   = decorators.DefaultSecurityConfig
+
+	// Funções de geração
+	GenerateInitFile = decorators.GenerateInitFile
+
+	// Funções de documentação
+	DocsHandler            = decorators.DocsHandler
+	DocsJSONHandler        = decorators.DocsJSONHandler
+	OpenAPIJSONHandler     = decorators.OpenAPIJSONHandler
+	OpenAPIYAMLHandler     = decorators.OpenAPIYAMLHandler
+	SwaggerUIHandler       = decorators.SwaggerUIHandler
+	SwaggerRedirectHandler = decorators.SwaggerRedirectHandler
 
 	// WebSocket functions
 	RegisterWebSocketHandler         = decorators.RegisterWebSocketHandler
@@ -69,4 +91,7 @@ type (
 	ParserHook = decorators.ParserHook
 	// GeneratorHook represents a hook for custom generation logic
 	GeneratorHook = decorators.GeneratorHook
+
+	// Security types
+	SecurityConfig = decorators.SecurityConfig
 )
