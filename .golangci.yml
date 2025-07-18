@@ -4,18 +4,31 @@ run:
 
 linters:
   enable:
+    # Formatação
     - gofmt
     - goimports
+    
+    # Análise estática básica
     - govet
     - staticcheck
     - gosimple
     - ineffassign
     - unused
+    
+    # Qualidade de código
     - misspell
     - gosec
     - errcheck
     - gocritic
     - revive
+    
+    # Performance
+    - prealloc
+    - wastedassign
+    
+    # Estilo
+    - whitespace
+    - gocognit
 
 linters-settings:
   gocritic:
@@ -25,6 +38,13 @@ linters-settings:
       - opinionated
       - performance
       - style
+  
+  gocognit:
+    min-complexity: 30
+  
+  whitespace:
+    multi-if: false
+    multi-func: false
 
 issues:
   exclude-rules:
