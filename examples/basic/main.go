@@ -7,14 +7,20 @@ import (
 
 func main() {
 	// O framework automatically carrega todas as rotas dos handlers
-	r := deco.Default()
+	devSecurity := &deco.SecurityConfig{
+		// Permitir redes privadas (VPN, Docker, etc.)
+		AllowPrivateNetworks: true,
+		// Permitir localhost
+		AllowLocalhost: true,
+		// Mensagem de erro amigável
+		ErrorMessage: "Acesso negado: Endpoints de documentação restritos ao ambiente de desenvolvimento",
+		// Log de tentativas bloqueadas
+		LogBlockedAttempts: true,
+	}
 
-	// Servidor rodando na porta 8080
-	// Acesse:
-	// - http://localhost:8080/api/health
-	// - http://localhost:8080/api/users
-	// - http://localhost:8080/decorators/docs (documentação)
-	// - http://localhost:8080/demo/websocket (teste WebSocket)
+	// Criar engine com segurança
+	r := deco.DefaultWithSecurity(devSecurity)
+
 	if err := r.Run(":8080"); err != nil {
 		panic(err)
 	}

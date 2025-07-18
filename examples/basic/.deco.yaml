@@ -1,8 +1,8 @@
 version: "1.0"
 handlers:
     include:
-        - '**/*.go'
-        - './*.go'
+        - handlers/*.go
+        - handlers/**/*.go
     exclude:
         - '**/*_test.go'
         - '**/mock_*.go'
@@ -15,7 +15,7 @@ handlers:
 generation: {}
 dev:
     auto_discover: true
-    watch: true
+    watch: false
 prod:
     validate: true
     minify: false
@@ -59,7 +59,7 @@ validation:
     fail_fast: false
     error_format: json
 websocket:
-    enabled: true
+    enabled: false
     read_buffer: 1024
     write_buffer: 1024
     check_origin: false
@@ -80,3 +80,30 @@ client_sdk:
     languages:
         - go
     package_name: client
+proxy:
+    enabled: true
+    service_discovery:
+        consul:
+            enabled: false
+            address: localhost:8500
+            datacenter: dc1
+        kubernetes:
+            enabled: false
+        dns:
+            enabled: true
+    load_balancing:
+        default_algorithm: round_robin
+        health_check_interval: 30s
+        health_check_timeout: 5s
+    circuit_breaker:
+        enabled: true
+        default_failure_threshold: 5
+        default_recovery_timeout: 30s
+    retry:
+        default_attempts: 3
+        default_backoff: exponential
+        default_delay: 1s
+    http_client:
+        timeout: 10s
+        max_idle_conns: 100
+        idle_conn_timeout: 90s
