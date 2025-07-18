@@ -19,16 +19,21 @@ if not lint_output:
     exit(0)
 
 prompt = f"""
-Você é um engenheiro de software sênior revisando um pull request. O CI identificou os seguintes problemas de lint e qualidade de código Go. Para cada problema, gere um comentário técnico claro e objetivo, explicando:
+Você é um engenheiro de software sênior revisando um pull request. O CI executou golangci-lint e identificou os seguintes problemas de qualidade de código Go. 
 
-* **Descrição do Problema:** Explique o que está errado e por que é importante corrigir.
-* **Localização:** Se possível, indique o arquivo/trecho afetado.
-* **Sugestão de Correção:** Dê dicas práticas de como resolver, incluindo comandos ou exemplos se necessário.
+Para cada problema, gere um comentário técnico claro e objetivo, explicando:
 
-Os problemas encontrados foram:
+* **🔍 Descrição:** O que está errado e por que é importante corrigir
+* **📍 Localização:** Arquivo e linha onde o problema ocorre
+* **🛠️ Solução:** Como corrigir, incluindo exemplos de código quando relevante
+* **⚡ Prioridade:** Alta/Média/Baixa baseada no impacto
+
+**Problemas encontrados pelo golangci-lint:**
+```
 {lint_output}
+```
 
-Formate sua resposta como uma lista numerada em markdown, com um item para cada problema identificado.
+Formate sua resposta como uma lista numerada em markdown, agrupando problemas similares quando possível. Seja conciso mas informativo.
 """
 
 response = openai.chat.completions.create(
@@ -45,6 +50,6 @@ git = Github(auth=auth)
 repo = git.get_repo(REPO_NAME)
 pull_request = repo.get_pull(int(PR_NUMBER))
 
-comment_body = f"### Problemas de Lint encontrados pelo CI\n\n{detailed_report}\n\n**Sugestões:**\n\n- Corrija os problemas apontados para garantir a qualidade e padronização do código.\n- Utilize o script `.config/scripts/lint.sh` localmente para validar antes de subir novas alterações."
+comment_body = f"### 🔍 Problemas de Lint encontrados pelo CI\n\n{detailed_report}\n\n**💡 Sugestões:**\n\n- Corrija os problemas apontados para garantir a qualidade e padronização do código.\n- Execute `make lint` localmente para validar antes de subir novas alterações.\n- Use `make lint-fix` para corrigir automaticamente alguns problemas de formatação."
 
 pull_request.create_issue_comment(comment_body) 
