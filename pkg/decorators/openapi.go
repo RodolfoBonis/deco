@@ -326,7 +326,7 @@ func GenerateOpenAPISpec(config *Config) *OpenAPISpec {
 		for _, scheme := range config.OpenAPI.Schemes {
 			spec.Servers = append(spec.Servers, OpenAPIServer{
 				URL:         fmt.Sprintf("%s://%s%s", scheme, config.OpenAPI.Host, config.OpenAPI.BasePath),
-				Description: fmt.Sprintf("Servidor %s", strings.ToUpper(scheme)),
+				Description: fmt.Sprintf("Server %s", strings.ToUpper(scheme)),
 			})
 		}
 	}
@@ -664,20 +664,20 @@ func addDefaultSecuritySchemes(components *OpenAPIComponents) {
 		Type:         "http",
 		Scheme:       "bearer",
 		BearerFormat: "JWT",
-		Description:  "Autenticação via Bearer Token (JWT)",
+		Description:  "Authentication via Bearer Token (JWT)",
 	}
 
 	components.SecuritySchemes["ApiKeyAuth"] = SecurityScheme{
 		Type:        "apiKey",
 		In:          "header",
 		Name:        "X-API-Key",
-		Description: "Autenticação via API Key no header",
+		Description: "Authentication via API Key in header",
 	}
 
 	components.SecuritySchemes["BasicAuth"] = SecurityScheme{
 		Type:        "http",
 		Scheme:      "basic",
-		Description: "Autenticação HTTP Basic",
+		Description: "HTTP Basic Authentication",
 	}
 
 	components.SecuritySchemes["OAuth2"] = SecurityScheme{
@@ -688,9 +688,9 @@ func addDefaultSecuritySchemes(components *OpenAPIComponents) {
 				AuthorizationURL: "/oauth/authorize",
 				TokenURL:         "/oauth/token",
 				Scopes: map[string]string{
-					"read":  "Permissão de leitura",
-					"write": "Permissão de escrita",
-					"admin": "Permissões administrativas",
+					"read":  "Read permission",
+					"write": "Write permission",
+					"admin": "Administrative permissions",
 				},
 			},
 		},
@@ -804,40 +804,27 @@ func OpenAPIYAMLHandler(config *Config) gin.HandlerFunc {
 	}
 }
 
-// SwaggerUIHandler serves Swagger UI interface for API documentation
-func SwaggerUIHandler(_ *Config) gin.HandlerFunc {
+// SwaggerUIHandler creates Swagger UI handler with customizable settings via config
+func SwaggerUIHandler(config *Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// HTML template for Swagger UI
-		swaggerHTML := `<!DOCTYPE html>
+		// Use config to customize Swagger UI settings
+		swaggerURL := "/swagger/doc.json"
+		if config.OpenAPI.BasePath != "" {
+			swaggerURL = config.OpenAPI.BasePath + swaggerURL
+		}
+
+		// Customize Swagger UI HTML based on config
+		html := fmt.Sprintf(`
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>API Documentation - Swagger UI</title>
+    <title>%s - API Documentation</title>
     <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@4.15.5/swagger-ui.css" />
     <style>
-        html {
-            box-sizing: border-box;
-            overflow: -moz-scrollbars-vertical;
-            overflow-y: scroll;
-        }
-        *, *:before, *:after {
-            box-sizing: inherit;
-        }
-        body {
-            margin:0;
-            background: #fafafa;
-        }
-        .swagger-ui .topbar {
-            background-color: #667eea;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        }
-        .swagger-ui .topbar .download-url-wrapper {
-            display: none;
-        }
-        .swagger-ui .info .title {
-            color: #667eea;
-        }
+        html { box-sizing: border-box; overflow: -moz-scrollbars-vertical; overflow-y: scroll; }
+        *, *:before, *:after { box-sizing: inherit; }
+        body { margin:0; background: #fafafa; }
     </style>
 </head>
 <body>
@@ -847,7 +834,7 @@ func SwaggerUIHandler(_ *Config) gin.HandlerFunc {
     <script>
         window.onload = function() {
             const ui = SwaggerUIBundle({
-                url: '/decorators/openapi.json',
+                url: '%s',
                 dom_id: '#swagger-ui',
                 deepLinking: true,
                 presets: [
@@ -859,22 +846,22 @@ func SwaggerUIHandler(_ *Config) gin.HandlerFunc {
                 ],
                 layout: "StandaloneLayout",
                 validatorUrl: null,
+                docExpansion: "list",
+                filter: true,
+                showRequestHeaders: true,
                 tryItOutEnabled: true,
-                supportedSubmitMethods: ['get', 'post', 'put', 'delete', 'patch'],
-                onComplete: function() {
-                    console.log('Swagger UI carregado com sucesso!');
-                },
-                onFailure: function(data) {
-                    console.error('Erro ao carregar Swagger UI:', data);
+                requestInterceptor: function(request) {
+                    // Add custom headers if needed
+                    return request;
                 }
             });
         };
     </script>
 </body>
-</html>`
+</html>`, config.OpenAPI.Title, swaggerURL)
 
 		c.Header("Content-Type", "text/html; charset=utf-8")
-		c.String(http.StatusOK, swaggerHTML)
+		c.String(http.StatusOK, html)
 	}
 }
 

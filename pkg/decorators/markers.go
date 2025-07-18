@@ -3,6 +3,7 @@ package decorators
 import (
 	"net/http"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -339,22 +340,28 @@ func parseKeyValue(input, key string) string {
 }
 
 // createValidateMiddleware creates general validation middleware
-func createValidateMiddleware(_ []string) gin.HandlerFunc {
+// Cannot customize required fields via args, as it depends on the validated struct
+func createValidateMiddleware(args []string) gin.HandlerFunc {
+	// Args ignored, as validation depends on the struct
 	config := DefaultConfig().Validation
 	return ValidateStruct(&config)
 }
 
-// createValidateJSONMiddleware creates JSON validation middleware
-func createValidateJSONMiddleware(_ []string) gin.HandlerFunc {
-	// For now, return basic middleware - target will be inferred at runtime
-
+// createValidateJSONMiddleware creates JSON validation middleware with support for required fields via args
+func createValidateJSONMiddleware(args []string) gin.HandlerFunc {
+	var requiredFields []string
+	for _, arg := range args {
+		if strings.HasPrefix(arg, "required=") {
+			fields := strings.TrimPrefix(arg, "required=")
+			requiredFields = strings.Split(fields, ",")
+		}
+	}
 	return gin.HandlerFunc(func(c *gin.Context) {
-		// Generic middleware that tries to validate any JSON struct
 		var data map[string]interface{}
 		if err := c.ShouldBindJSON(&data); err != nil {
 			response := ValidationResponse{
 				Error:   "validation_failed",
-				Message: "Formato JSON inválido",
+				Message: "Invalid JSON format",
 				Fields: []ValidationField{{
 					Field:   "json",
 					Message: err.Error(),
@@ -363,25 +370,48 @@ func createValidateJSONMiddleware(_ []string) gin.HandlerFunc {
 			c.AbortWithStatusJSON(http.StatusBadRequest, response)
 			return
 		}
+		// Check custom required fields
+		for _, field := range requiredFields {
+			if _, ok := data[field]; !ok {
+				c.AbortWithStatusJSON(http.StatusBadRequest, ValidationResponse{
+					Error:   "validation_failed",
+					Message: "Required field missing: " + field,
+				})
+				return
+			}
+		}
 		c.Set("validated_data", data)
 		c.Next()
 	})
 }
 
-// createValidateQueryMiddleware creates query parameter validation middleware
-func createValidateQueryMiddleware(_ []string) gin.HandlerFunc {
-
+// createValidateQueryMiddleware creates query string validation middleware with support for required fields via args
+func createValidateQueryMiddleware(args []string) gin.HandlerFunc {
+	var requiredFields []string
+	for _, arg := range args {
+		if strings.HasPrefix(arg, "required=") {
+			fields := strings.TrimPrefix(arg, "required=")
+			requiredFields = strings.Split(fields, ",")
+		}
+	}
 	return gin.HandlerFunc(func(c *gin.Context) {
-		// Validate basic query parameters
 		query := c.Request.URL.Query()
 		validatedQuery := make(map[string]string)
-
 		for key, values := range query {
 			if len(values) > 0 {
 				validatedQuery[key] = values[0]
 			}
 		}
-
+		// Check required fields
+		for _, field := range requiredFields {
+			if _, ok := validatedQuery[field]; !ok {
+				c.AbortWithStatusJSON(http.StatusBadRequest, ValidationResponse{
+					Error:   "validation_failed",
+					Message: "Required field missing in query: " + field,
+				})
+				return
+			}
+		}
 		c.Set("validated_query", validatedQuery)
 		c.Next()
 	})
@@ -405,78 +435,107 @@ func createValidateParamsMiddleware(args []string) gin.HandlerFunc {
 	return ValidateParams(rules, &config)
 }
 
-// createWebSocketMiddleware creates WebSocket middleware
-func createWebSocketMiddleware(_ []string) gin.HandlerFunc {
-	// Load configuration from file instead of using defaults
-	fullConfig, err := LoadConfig("")
-	if err != nil {
-		// Fallback to default if error
-		config := DefaultConfig().WebSocket
-		return CreateWebSocketHandler(&config)
+// createWebSocketMiddleware creates WebSocket middleware with configuration support via args
+func createWebSocketMiddleware(args []string) gin.HandlerFunc {
+	config := DefaultConfig().WebSocket
+	for _, arg := range args {
+		if strings.HasPrefix(arg, "pingInterval=") {
+			v := strings.TrimPrefix(arg, "pingInterval=")
+			config.PingInterval = v // string
+		}
+		// MaxConnections doesn't exist in config, ignore
 	}
-	return CreateWebSocketHandler(&fullConfig.WebSocket)
+	return CreateWebSocketHandler(&config)
 }
 
-// createCacheByURLMiddleware creates URL-based cache middleware
-func createCacheByURLMiddleware(_ []string) gin.HandlerFunc {
+// createCacheByURLMiddleware creates URL-based cache middleware with customizable TTL via args
+func createCacheByURLMiddleware(args []string) gin.HandlerFunc {
 	config := DefaultConfig().Cache
+	for _, arg := range args {
+		if strings.HasPrefix(arg, "ttl=") {
+			v := strings.TrimPrefix(arg, "ttl=")
+			config.DefaultTTL = v // string
+		}
+	}
 	return CacheByURL(&config)
 }
 
-// createCacheByUserMiddleware creates user+URL-based cache middleware
-func createCacheByUserMiddleware(_ []string) gin.HandlerFunc {
+// createCacheByUserMiddleware creates user+URL-based cache middleware with customizable TTL via args
+func createCacheByUserMiddleware(args []string) gin.HandlerFunc {
 	config := DefaultConfig().Cache
+	for _, arg := range args {
+		if strings.HasPrefix(arg, "ttl=") {
+			v := strings.TrimPrefix(arg, "ttl=")
+			config.DefaultTTL = v // string
+		}
+	}
 	return CacheByUserURL(&config)
 }
 
-// createPrometheusMiddleware creates Prometheus metrics middleware
-func createPrometheusMiddleware(_ []string) gin.HandlerFunc {
+// createPrometheusMiddleware creates Prometheus metrics middleware (no customizable args at the moment)
+func createPrometheusMiddleware(args []string) gin.HandlerFunc {
 	return PrometheusHandler()
 }
 
-// createHealthCheckMiddleware creates health check middleware
-func createHealthCheckMiddleware(_ []string) gin.HandlerFunc {
+// createHealthCheckMiddleware creates health check middleware (no customizable args at the moment)
+func createHealthCheckMiddleware(args []string) gin.HandlerFunc {
 	return HealthCheckHandler()
 }
 
-// createCacheStatsMiddleware creates cache statistics middleware
-func createCacheStatsMiddleware(_ []string) gin.HandlerFunc {
+// createCacheStatsMiddleware creates cache statistics middleware with customizable maxSize via args
+func createCacheStatsMiddleware(args []string) gin.HandlerFunc {
 	config := DefaultConfig().Cache
+	for _, arg := range args {
+		if strings.HasPrefix(arg, "maxSize=") {
+			v := strings.TrimPrefix(arg, "maxSize=")
+			if n, err := strconv.Atoi(v); err == nil {
+				config.MaxSize = n
+			}
+		}
+	}
 	store := NewMemoryCache(config.MaxSize)
 	return CacheStatsHandler(store)
 }
 
-// createInvalidateCacheMiddleware creates cache invalidation middleware
-func createInvalidateCacheMiddleware(_ []string) gin.HandlerFunc {
+// createInvalidateCacheMiddleware creates cache invalidation middleware with customizable maxSize via args
+func createInvalidateCacheMiddleware(args []string) gin.HandlerFunc {
 	config := DefaultConfig().Cache
+	for _, arg := range args {
+		if strings.HasPrefix(arg, "maxSize=") {
+			v := strings.TrimPrefix(arg, "maxSize=")
+			if n, err := strconv.Atoi(v); err == nil {
+				config.MaxSize = n
+			}
+		}
+	}
 	store := NewMemoryCache(config.MaxSize)
 	return InvalidateCacheHandler(store)
 }
 
-// createWebSocketStatsMiddleware creates WebSocket statistics middleware
-func createWebSocketStatsMiddleware(_ []string) gin.HandlerFunc {
+// createWebSocketStatsMiddleware creates WebSocket statistics middleware (no customizable args at the moment)
+func createWebSocketStatsMiddleware(args []string) gin.HandlerFunc {
 	return WebSocketStatsHandler()
 }
 
-// createTracingStatsMiddleware creates tracing statistics middleware
-func createTracingStatsMiddleware(_ []string) gin.HandlerFunc {
+// createTracingStatsMiddleware creates tracing statistics middleware (no customizable args at the moment)
+func createTracingStatsMiddleware(args []string) gin.HandlerFunc {
 	return TracingStatsHandler()
 }
 
-// createOpenAPIJSONMiddleware creates OpenAPI JSON middleware
-func createOpenAPIJSONMiddleware(_ []string) gin.HandlerFunc {
+// createOpenAPIJSONMiddleware creates OpenAPI JSON middleware (no customizable args at the moment)
+func createOpenAPIJSONMiddleware(args []string) gin.HandlerFunc {
 	config := DefaultConfig()
 	return OpenAPIJSONHandler(config)
 }
 
-// createOpenAPIYAMLMiddleware creates OpenAPI YAML middleware
-func createOpenAPIYAMLMiddleware(_ []string) gin.HandlerFunc {
+// createOpenAPIYAMLMiddleware creates OpenAPI YAML middleware (no customizable args at the moment)
+func createOpenAPIYAMLMiddleware(args []string) gin.HandlerFunc {
 	config := DefaultConfig()
 	return OpenAPIYAMLHandler(config)
 }
 
-// createSwaggerUIMiddleware creates Swagger UI middleware
-func createSwaggerUIMiddleware(_ []string) gin.HandlerFunc {
+// createSwaggerUIMiddleware creates Swagger UI middleware (no customizable args at the moment)
+func createSwaggerUIMiddleware(args []string) gin.HandlerFunc {
 	config := DefaultConfig()
 	return SwaggerUIHandler(config)
 }
@@ -490,32 +549,62 @@ func createTraceMiddlewareWrapper(args []string) gin.HandlerFunc {
 	return TraceMiddleware(middlewareName)
 }
 
-// createCacheByEndpointMiddleware creates endpoint-based cache middleware
-func createCacheByEndpointMiddleware(_ []string) gin.HandlerFunc {
+// createCacheByEndpointMiddleware creates endpoint-based cache middleware with customizable TTL via args
+func createCacheByEndpointMiddleware(args []string) gin.HandlerFunc {
 	config := DefaultConfig().Cache
+	for _, arg := range args {
+		if strings.HasPrefix(arg, "ttl=") {
+			v := strings.TrimPrefix(arg, "ttl=")
+			config.DefaultTTL = v // string
+		}
+	}
 	return CacheByEndpoint(&config)
 }
 
-// createRateLimitByIPMiddleware creates IP-based rate limiting middleware
-func createRateLimitByIPMiddleware(_ []string) gin.HandlerFunc {
+// createRateLimitByIPMiddleware creates IP-based rate limiting middleware with customizable limit via args
+func createRateLimitByIPMiddleware(args []string) gin.HandlerFunc {
 	config := DefaultConfig().RateLimit
+	for _, arg := range args {
+		if strings.HasPrefix(arg, "limit=") {
+			v := strings.TrimPrefix(arg, "limit=")
+			if n, err := strconv.Atoi(v); err == nil {
+				config.DefaultRPS = n
+			}
+		}
+	}
 	return RateLimitByIP(&config)
 }
 
-// createRateLimitByUserMiddleware creates user-based rate limiting middleware
-func createRateLimitByUserMiddleware(_ []string) gin.HandlerFunc {
+// createRateLimitByUserMiddleware creates user-based rate limiting middleware with customizable limit via args
+func createRateLimitByUserMiddleware(args []string) gin.HandlerFunc {
 	config := DefaultConfig().RateLimit
+	for _, arg := range args {
+		if strings.HasPrefix(arg, "limit=") {
+			v := strings.TrimPrefix(arg, "limit=")
+			if n, err := strconv.Atoi(v); err == nil {
+				config.DefaultRPS = n
+			}
+		}
+	}
 	return RateLimitByUser(&config)
 }
 
-// createRateLimitByEndpointMiddleware creates endpoint-based rate limiting middleware
-func createRateLimitByEndpointMiddleware(_ []string) gin.HandlerFunc {
+// createRateLimitByEndpointMiddleware creates endpoint-based rate limiting middleware with customizable limit via args
+func createRateLimitByEndpointMiddleware(args []string) gin.HandlerFunc {
 	config := DefaultConfig().RateLimit
+	for _, arg := range args {
+		if strings.HasPrefix(arg, "limit=") {
+			v := strings.TrimPrefix(arg, "limit=")
+			if n, err := strconv.Atoi(v); err == nil {
+				config.DefaultRPS = n
+			}
+		}
+	}
 	return RateLimitByEndpoint(&config)
 }
 
-// createHealthCheckWithTracingMiddleware creates health check with tracing middleware
-func createHealthCheckWithTracingMiddleware(_ []string) gin.HandlerFunc {
+// createHealthCheckWithTracingMiddleware creates health check with tracing (no customizable args at the moment)
+func createHealthCheckWithTracingMiddleware(args []string) gin.HandlerFunc {
 	return HealthCheckWithTracing()
 }
 

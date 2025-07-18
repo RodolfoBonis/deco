@@ -75,7 +75,14 @@ func NewMemoryRateLimiter() *MemoryRateLimiter {
 }
 
 // Allow checks if the request can proceed (in-memory implementation)
-func (m *MemoryRateLimiter) Allow(_ context.Context, key string, limit int, window time.Duration) (allowed bool, remaining int, retryAfter time.Duration, err error) {
+func (m *MemoryRateLimiter) Allow(ctx context.Context, key string, limit int, window time.Duration) (allowed bool, remaining int, retryAfter time.Duration, err error) {
+	// Use context for timeout and cancellation
+	select {
+	case <-ctx.Done():
+		return false, 0, 0, ctx.Err()
+	default:
+	}
+
 	now := time.Now()
 
 	bucket, exists := m.buckets[key]
@@ -116,7 +123,14 @@ func (m *MemoryRateLimiter) Allow(_ context.Context, key string, limit int, wind
 }
 
 // Reset clears the bucket for a key (in-memory implementation)
-func (m *MemoryRateLimiter) Reset(_ context.Context, key string) error {
+func (m *MemoryRateLimiter) Reset(ctx context.Context, key string) error {
+	// Use context for timeout and cancellation
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
+
 	delete(m.buckets, key)
 	return nil
 }
@@ -143,6 +157,13 @@ func NewRedisRateLimiter(config RedisConfig) (*RedisRateLimiter, error) {
 
 // Allow checks if the request can proceed (Redis implementation)
 func (r *RedisRateLimiter) Allow(ctx context.Context, key string, limit int, window time.Duration) (allowed bool, remaining int, retryAfter time.Duration, err error) {
+	// Use context for timeout and cancellation
+	select {
+	case <-ctx.Done():
+		return false, 0, 0, ctx.Err()
+	default:
+	}
+
 	// Lua script for atomic rate limiting operation
 	script := `
 		local key = KEYS[1]
@@ -193,8 +214,15 @@ func (r *RedisRateLimiter) Allow(ctx context.Context, key string, limit int, win
 }
 
 // Reset clears the bucket for a key (Redis implementation)
-func (r *RedisRateLimiter) Reset(_ context.Context, key string) error {
-	return r.client.Del(context.Background(), key).Err()
+func (r *RedisRateLimiter) Reset(ctx context.Context, key string) error {
+	// Use context for timeout and cancellation
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
+
+	return r.client.Del(ctx, key).Err()
 }
 
 // RateLimitMiddleware creates rate limiting middleware
@@ -277,14 +305,75 @@ func RateLimitByEndpoint(config *RateLimitConfig) gin.HandlerFunc {
 }
 
 // CustomRateLimit customizable rate limiting middleware
-func CustomRateLimit(limit int, _ time.Duration, keyGen KeyGeneratorFunc, rateLimiterType string) gin.HandlerFunc {
+func CustomRateLimit(limit int, window time.Duration, keyGen KeyGeneratorFunc, rateLimiterType string) gin.HandlerFunc {
 	config := &RateLimitConfig{
 		Enabled:    true,
 		Type:       rateLimiterType,
 		DefaultRPS: limit,
 	}
 
-	return RateLimitMiddleware(config, keyGen)
+	// Create specific limiter based on type
+	var limiter RateLimiter
+	if rateLimiterType == "redis" {
+		redisConfig := DefaultConfig().Redis
+		if redisLimiter, err := NewRedisRateLimiter(redisConfig); err == nil {
+			limiter = redisLimiter
+		} else {
+			limiter = NewMemoryRateLimiter()
+		}
+	} else {
+		limiter = NewMemoryRateLimiter()
+	}
+
+	return func(c *gin.Context) {
+		if !config.Enabled {
+			c.Next()
+			return
+		}
+
+		// Generate key for this client/endpoint
+		key := keyGen(c)
+
+		// Use context with timeout
+		ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+		defer cancel()
+
+		// Check rate limit using the custom window
+		allowed, remaining, retryAfter, err := limiter.Allow(
+			ctx,
+			key,
+			limit,
+			window, // Use the custom window parameter
+		)
+
+		if err != nil {
+			// In case of error, allow request (fail-open)
+			c.Next()
+			return
+		}
+
+		// Add informative headers
+		c.Header("X-RateLimit-Limit", strconv.Itoa(limit))
+		c.Header("X-RateLimit-Remaining", strconv.Itoa(remaining))
+		c.Header("X-RateLimit-Window", window.String())
+
+		if !allowed {
+			c.Header("Retry-After", strconv.FormatInt(int64(retryAfter.Seconds()), 10))
+
+			response := RateLimitResponse{
+				Error:      "rate_limit_exceeded",
+				Message:    fmt.Sprintf("Request rate exceeded. Limit: %d per %v", limit, window),
+				Limit:      limit,
+				Remaining:  0,
+				RetryAfter: int(retryAfter.Seconds()),
+			}
+
+			c.AbortWithStatusJSON(http.StatusTooManyRequests, response)
+			return
+		}
+
+		c.Next()
+	}
 }
 
 // ParseRateLimitArgs parses @RateLimit decorator arguments

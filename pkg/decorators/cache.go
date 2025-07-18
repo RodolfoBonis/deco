@@ -92,7 +92,14 @@ func NewMemoryCache(maxSize int) *MemoryCache {
 }
 
 // Get retrieves cache entry (in-memory implementation)
-func (m *MemoryCache) Get(_ context.Context, key string) (*CacheEntry, error) {
+func (m *MemoryCache) Get(ctx context.Context, key string) (*CacheEntry, error) {
+	// Use context for timeout and cancellation
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+	}
+
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
@@ -123,7 +130,14 @@ func (m *MemoryCache) Get(_ context.Context, key string) (*CacheEntry, error) {
 }
 
 // Set stores cache entry (in-memory implementation)
-func (m *MemoryCache) Set(_ context.Context, key string, entry *CacheEntry, ttl time.Duration) error {
+func (m *MemoryCache) Set(ctx context.Context, key string, entry *CacheEntry, ttl time.Duration) error {
+	// Use context for timeout and cancellation
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
+
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -155,7 +169,14 @@ func (m *MemoryCache) Set(_ context.Context, key string, entry *CacheEntry, ttl 
 }
 
 // Delete removes cache entry (in-memory implementation)
-func (m *MemoryCache) Delete(_ context.Context, key string) error {
+func (m *MemoryCache) Delete(ctx context.Context, key string) error {
+	// Use context for timeout and cancellation
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
+
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -169,7 +190,14 @@ func (m *MemoryCache) Delete(_ context.Context, key string) error {
 }
 
 // Clear clears entire cache (in-memory implementation)
-func (m *MemoryCache) Clear(_ context.Context) error {
+func (m *MemoryCache) Clear(ctx context.Context) error {
+	// Use context for timeout and cancellation
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
+
 	m.mu.Lock()
 	defer m.mu.Unlock()
 

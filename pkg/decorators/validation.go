@@ -123,7 +123,7 @@ func ValidateJSON(target interface{}, config *ValidationConfig) gin.HandlerFunc 
 				// JSON parsing error
 				validationErrors = append(validationErrors, ValidationField{
 					Field:   "json",
-					Message: "Formato JSON inválido",
+					Message: "Invalid JSON format",
 				})
 			}
 
@@ -214,7 +214,7 @@ func ValidateQuery(target interface{}, config *ValidationConfig) gin.HandlerFunc
 }
 
 // ValidateParams middleware for path parameter validation
-func ValidateParams(rules map[string]string, _ *ValidationConfig) gin.HandlerFunc {
+func ValidateParams(rules map[string]string, config *ValidationConfig) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var validationErrors []ValidationField
 
@@ -225,7 +225,7 @@ func ValidateParams(rules map[string]string, _ *ValidationConfig) gin.HandlerFun
 					Field:   param,
 					Value:   "",
 					Tag:     "required",
-					Message: fmt.Sprintf("Parameter '%s' is required", param),
+					Message: getValidationMessageForParam(param, "required", "", config),
 				})
 				continue
 			}
@@ -236,7 +236,7 @@ func ValidateParams(rules map[string]string, _ *ValidationConfig) gin.HandlerFun
 					Field:   param,
 					Value:   value,
 					Tag:     rule,
-					Message: fmt.Sprintf("Parameter '%s' does not meet rule '%s'", param, rule),
+					Message: getValidationMessageForParam(param, rule, value, config),
 				})
 			}
 		}
@@ -257,12 +257,17 @@ func ValidateParams(rules map[string]string, _ *ValidationConfig) gin.HandlerFun
 }
 
 // getValidationMessage returns custom error message
-func getValidationMessage(fieldErr validator.FieldError, _ *ValidationConfig) string {
+func getValidationMessage(fieldErr validator.FieldError, config *ValidationConfig) string {
 	field := fieldErr.Field()
 	tag := fieldErr.Tag()
 	param := fieldErr.Param()
 
-	// Custom messages in Portuguese
+	// Use custom error format if specified in config
+	if config.ErrorFormat == "detailed" {
+		return getDetailedValidationMessage(field, tag, param, config)
+	}
+
+	// Custom messages in English
 	messages := map[string]string{
 		"required": "is required",
 		"email":    "must be a valid email",
@@ -286,10 +291,47 @@ func getValidationMessage(fieldErr validator.FieldError, _ *ValidationConfig) st
 	}
 
 	if message, exists := messages[tag]; exists {
-		return fmt.Sprintf("Campo '%s' %s", field, message)
+		return fmt.Sprintf("Field '%s' %s", field, message)
 	}
 
 	return fmt.Sprintf("Field '%s' is invalid (%s)", field, tag)
+}
+
+// getValidationMessageForParam returns custom error message for path parameters
+func getValidationMessageForParam(param, rule, value string, config *ValidationConfig) string {
+	// Use custom error format if specified in config
+	if config.ErrorFormat == "detailed" {
+		return getDetailedValidationMessage(param, rule, value, config)
+	}
+
+	// Custom messages for path parameters
+	messages := map[string]string{
+		"required": fmt.Sprintf("Parameter '%s' is required", param),
+		"numeric":  fmt.Sprintf("Parameter '%s' must be a number", param),
+		"uuid":     fmt.Sprintf("Parameter '%s' must be a valid UUID", param),
+		"alpha":    fmt.Sprintf("Parameter '%s' must contain only letters", param),
+		"email":    fmt.Sprintf("Parameter '%s' must be a valid email", param),
+	}
+
+	if message, exists := messages[rule]; exists {
+		return message
+	}
+
+	return fmt.Sprintf("Parameter '%s' does not meet rule '%s'", param, rule)
+}
+
+// getDetailedValidationMessage returns detailed validation message using config settings
+func getDetailedValidationMessage(field, tag, param string, config *ValidationConfig) string {
+	// Use custom translation function if specified
+	if config.TranslateFunc != "" {
+		// In a real implementation, this would call the specified translation function
+		return fmt.Sprintf("[%s] Field '%s' failed validation '%s' with param '%s'",
+			config.TranslateFunc, field, tag, param)
+	}
+
+	// Return detailed message with field context
+	return fmt.Sprintf("Validation failed for field '%s': rule '%s' with parameter '%s'",
+		field, tag, param)
 }
 
 // validateParamValue validates parameter value based on rule

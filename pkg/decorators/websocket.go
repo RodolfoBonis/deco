@@ -36,10 +36,10 @@ type WebSocketConnection struct {
 
 // WebSocketHub manages WebSocket connections
 type WebSocketHub struct {
-	// Connections ativas
+	// Active connections
 	connections map[string]*WebSocketConnection
 
-	// Grupos de connections
+	// Groups of connections
 	groups map[string]map[string]*WebSocketConnection
 
 	// Channel for broadcast
@@ -63,8 +63,8 @@ type WebSocketMessage struct {
 	Type      string                 `json:"type"`
 	Data      interface{}            `json:"data"`
 	Sender    string                 `json:"sender,omitempty"`
-	Target    string                 `json:"target,omitempty"` // ID da specific connection
-	Group     string                 `json:"group,omitempty"`  // Nome do grupo
+	Target    string                 `json:"target,omitempty"` // ID of specific connection
+	Group     string                 `json:"group,omitempty"`  // Group name
 	Timestamp time.Time              `json:"timestamp"`
 	Metadata  map[string]interface{} `json:"metadata,omitempty"`
 }
@@ -167,7 +167,7 @@ func (h *WebSocketHub) unregisterConnection(conn *WebSocketConnection) {
 
 		delete(h.connections, conn.ID)
 		close(conn.Send)
-		log.Printf("WebSocket: Connection removida %s", conn.ID)
+		log.Printf("WebSocket: Connection removed %s", conn.ID)
 	}
 }
 
@@ -178,7 +178,7 @@ func (h *WebSocketHub) broadcastMessage(message *WebSocketMessage) {
 
 	data := []byte(message.ToJSON())
 
-	// Envio directed to specific connection
+	// Send directed to specific connection
 	if message.Target != "" {
 		if conn, exists := h.connections[message.Target]; exists {
 			select {
@@ -223,7 +223,7 @@ func (h *WebSocketHub) pingConnections() {
 	for id, conn := range h.connections {
 		conn.mu.Lock()
 		if err := conn.Conn.WriteMessage(websocket.PingMessage, nil); err != nil {
-			log.Printf("WebSocket: Error ao enviar ping para %s: %v", id, err)
+			log.Printf("WebSocket: Error sending ping to %s: %v", id, err)
 			conn.mu.Unlock()
 			h.unregister <- conn
 			continue
@@ -249,7 +249,7 @@ func (h *WebSocketHub) JoinGroup(connID, groupName string) error {
 	h.groups[groupName][connID] = conn
 	conn.Groups[groupName] = true
 
-	log.Printf("WebSocket: Connection %s entrou no grupo %s", connID, groupName)
+	log.Printf("WebSocket: Connection %s joined group %s", connID, groupName)
 	return nil
 }
 
@@ -278,7 +278,7 @@ func (h *WebSocketHub) leaveGroupUnsafe(conn *WebSocketConnection, groupName str
 			delete(h.groups, groupName)
 		}
 
-		log.Printf("WebSocket: Connection %s saiu do grupo %s", conn.ID, groupName)
+		log.Printf("WebSocket: Connection %s left group %s", conn.ID, groupName)
 	}
 }
 
@@ -313,7 +313,7 @@ func CreateWebSocketHandler(config *WebSocketConfig) gin.HandlerFunc {
 	if !config.Enabled {
 		return func(c *gin.Context) {
 			c.JSON(http.StatusNotImplemented, gin.H{
-				"error": "WebSocket not habilitado",
+				"error": "WebSocket not enabled",
 			})
 		}
 	}
@@ -327,7 +327,7 @@ func CreateWebSocketHandler(config *WebSocketConfig) gin.HandlerFunc {
 		// Upgrade to WebSocket
 		conn, err := WebSocketUpgrader.Upgrade(c.Writer, c.Request, nil)
 		if err != nil {
-			log.Printf("WebSocket: Error no upgrade: %v", err)
+			log.Printf("WebSocket: Error during upgrade: %v", err)
 			return
 		}
 
@@ -382,7 +382,7 @@ func (c *WebSocketConnection) readPump() {
 		// Parse the message
 		var message WebSocketMessage
 		if err := json.Unmarshal(messageBytes, &message); err != nil {
-			log.Printf("WebSocket: Error ao fazer parse da mensagem: %v", err)
+			log.Printf("WebSocket: Error parsing message: %v", err)
 			continue
 		}
 
@@ -475,7 +475,7 @@ func JoinGroupHandler(conn *WebSocketConnection, message *WebSocketMessage) erro
 			return conn.Hub.JoinGroup(conn.ID, groupName)
 		}
 	}
-	return fmt.Errorf("grupo not especificado")
+	return fmt.Errorf("group not specified")
 }
 
 // LeaveGroupHandler handler to leave group
@@ -485,7 +485,7 @@ func LeaveGroupHandler(conn *WebSocketConnection, message *WebSocketMessage) err
 			return conn.Hub.LeaveGroup(conn.ID, groupName)
 		}
 	}
-	return fmt.Errorf("grupo not especificado")
+	return fmt.Errorf("group not specified")
 }
 
 // EchoHandler echo handler for testing
@@ -590,14 +590,42 @@ func WebSocketStatsHandler() gin.HandlerFunc {
 	}
 }
 
-// WebSocketHandlerWrapper converts WebSocketHandler to gin.HandlerFunc for documentation
-func WebSocketHandlerWrapper(_ WebSocketHandler) gin.HandlerFunc {
+// WebSocketHandlerWrapper converts a WebSocketHandler to gin.HandlerFunc, allowing customization
+func WebSocketHandlerWrapper(handler WebSocketHandler) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// This is just a wrapper for documentation purposes
-		// The actual WebSocket handling is done by the WebSocket system
+		// Example: customization - connection logging
+		connID := c.Query("conn_id")
+		if connID == "" {
+			connID = "anonymous"
+		}
+		// Create a fake connection for example
+		conn := &WebSocketConnection{ID: connID}
+		msg := &WebSocketMessage{Type: "connect", Data: nil}
+		if err := handler(conn, msg); err != nil {
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
 		c.JSON(200, gin.H{
-			"message": "WebSocket handler - use WebSocket connection to interact",
-			"type":    "websocket_handler",
+			"message": "WebSocket handler executed successfully",
+			"conn_id": connID,
 		})
 	}
 }
+
+// CustomCheckOrigin allows customizable origin checking via parameter
+func CustomCheckOrigin(allowedOrigins []string) func(r *http.Request) bool {
+	return func(r *http.Request) bool {
+		origin := r.Header.Get("Origin")
+		if len(allowedOrigins) == 0 {
+			return true // Accept all if not specified
+		}
+		for _, ao := range allowedOrigins {
+			if origin == ao {
+				return true
+			}
+		}
+		return false
+	}
+}
+
+// Usage example: WebSocketUpgrader.CheckOrigin = CustomCheckOrigin([]string{"https://mysite.com"})

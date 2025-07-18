@@ -426,9 +426,32 @@ func HealthCheckHandler() gin.HandlerFunc {
 	}
 }
 
-// createMetricsMiddleware creates metrics middleware (for markers.go)
-func createMetricsMiddleware(_ []string) gin.HandlerFunc {
+// createMetricsMiddleware creates metrics middleware with customizable settings via args
+func createMetricsMiddleware(args []string) gin.HandlerFunc {
 	config := DefaultConfig().Metrics
+
+	// Parse custom settings from args
+	for _, arg := range args {
+		if strings.HasPrefix(arg, "namespace=") {
+			v := strings.TrimPrefix(arg, "namespace=")
+			config.Namespace = v
+		}
+		if strings.HasPrefix(arg, "subsystem=") {
+			v := strings.TrimPrefix(arg, "subsystem=")
+			config.Subsystem = v
+		}
+		if strings.HasPrefix(arg, "endpoint=") {
+			v := strings.TrimPrefix(arg, "endpoint=")
+			config.Endpoint = v
+		}
+		if strings.HasPrefix(arg, "enabled=") {
+			v := strings.TrimPrefix(arg, "enabled=")
+			if enabled, err := strconv.ParseBool(v); err == nil {
+				config.Enabled = enabled
+			}
+		}
+	}
+
 	return MetricsMiddleware(&config)
 }
 

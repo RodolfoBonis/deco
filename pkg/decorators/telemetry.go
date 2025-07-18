@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -365,9 +367,32 @@ func TracingStatsHandler() gin.HandlerFunc {
 	}
 }
 
-// createTelemetryMiddleware creates telemetry middleware (for markers.go)
-func createTelemetryMiddleware(_ []string) gin.HandlerFunc {
+// createTelemetryMiddleware creates telemetry middleware with customizable settings via args
+func createTelemetryMiddleware(args []string) gin.HandlerFunc {
 	config := DefaultConfig().Telemetry
+
+	// Parse custom settings from args
+	for _, arg := range args {
+		if strings.HasPrefix(arg, "sampleRate=") {
+			v := strings.TrimPrefix(arg, "sampleRate=")
+			if rate, err := strconv.ParseFloat(v, 64); err == nil && rate >= 0 && rate <= 1 {
+				config.SampleRate = rate
+			}
+		}
+		if strings.HasPrefix(arg, "serviceName=") {
+			v := strings.TrimPrefix(arg, "serviceName=")
+			config.ServiceName = v
+		}
+		if strings.HasPrefix(arg, "environment=") {
+			v := strings.TrimPrefix(arg, "environment=")
+			config.Environment = v
+		}
+		if strings.HasPrefix(arg, "endpoint=") {
+			v := strings.TrimPrefix(arg, "endpoint=")
+			config.Endpoint = v
+		}
+	}
+
 	return TracingMiddleware(&config)
 }
 
