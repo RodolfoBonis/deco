@@ -98,7 +98,7 @@ func filterComments(comments []*ast.CommentGroup) []*ast.CommentGroup {
 // minifyWithRegex simple regex-based minification application
 func minifyWithRegex(code string) string {
 	lines := strings.Split(code, "\n")
-	var minified []string
+	minified := make([]string, 0, len(lines))
 
 	for _, line := range lines {
 		trimmed := strings.TrimSpace(line)
@@ -142,7 +142,7 @@ func applyAdditionalMinification(code string) string {
 
 	// Remove excess spaces in lines
 	lines := strings.Split(code, "\n")
-	var cleaned []string
+	cleaned := make([]string, 0, len(lines))
 
 	for _, line := range lines {
 		// Keep indentation but clean unnecessary spaces at the end

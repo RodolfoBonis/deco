@@ -13,7 +13,7 @@ type HealthCheckerImpl struct {
 }
 
 // NewHealthChecker creates a new health checker
-func NewHealthChecker(config ProxyConfig) *HealthCheckerImpl {
+func NewHealthChecker(config *ProxyConfig) *HealthCheckerImpl {
 	timeout, _ := time.ParseDuration(config.Timeout)
 	if timeout == 0 {
 		timeout = 5 * time.Second
@@ -24,7 +24,7 @@ func NewHealthChecker(config ProxyConfig) *HealthCheckerImpl {
 	}
 
 	return &HealthCheckerImpl{
-		config: config,
+		config: *config,
 		client: client,
 	}
 }
@@ -55,6 +55,6 @@ func (hc *HealthCheckerImpl) Check(instance *ProxyInstance) bool {
 }
 
 // createHealthChecker creates a health checker from configuration
-func createHealthChecker(config ProxyConfig) HealthChecker {
+func createHealthChecker(config *ProxyConfig) HealthChecker {
 	return NewHealthChecker(config)
 }

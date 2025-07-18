@@ -109,7 +109,7 @@ const (
 // createProxyMiddleware creates proxy middleware with configuration
 func createProxyMiddleware(args []string) gin.HandlerFunc {
 	config := parseProxyConfig(args)
-	manager := getOrCreateProxyManager(config)
+	manager := getOrCreateProxyManager(&config)
 
 	return func(c *gin.Context) {
 		// 1. Intercept BEFORE (if handler wants)
@@ -117,7 +117,7 @@ func createProxyMiddleware(args []string) gin.HandlerFunc {
 
 		// 2. If handler didn't abort, do proxy
 		if !c.IsAborted() {
-			manager.Forward(c, config)
+			manager.Forward(c, &config)
 		}
 
 		// 3. Intercept AFTER (if handler wants)
@@ -194,7 +194,7 @@ func parseProxyConfig(args []string) ProxyConfig {
 }
 
 // getOrCreateProxyManager gets or creates a proxy manager
-func getOrCreateProxyManager(config ProxyConfig) *ProxyManager {
+func getOrCreateProxyManager(config *ProxyConfig) *ProxyManager {
 	// Create unique key for this configuration
 	key := fmt.Sprintf("%s:%s:%s", config.Service, config.Target, config.Discovery)
 
@@ -225,7 +225,7 @@ func getOrCreateProxyManager(config ProxyConfig) *ProxyManager {
 }
 
 // NewProxyManager creates a new proxy manager
-func NewProxyManager(config ProxyConfig) *ProxyManager {
+func NewProxyManager(config *ProxyConfig) *ProxyManager {
 	// Parse timeouts
 	timeout, _ := time.ParseDuration(config.Timeout)
 	if timeout == 0 {
@@ -240,13 +240,18 @@ func NewProxyManager(config ProxyConfig) *ProxyManager {
 			MaxIdleConnsPerHost: 10,
 			IdleConnTimeout:     90 * time.Second,
 			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true, // For development
+				// Secure TLS configuration
+				MinVersion: tls.VersionTLS12,
+				MaxVersion: tls.VersionTLS13,
+				// In production, this should be false and proper certificates should be used
+				// For development/testing, this can be true but should be configurable
+				InsecureSkipVerify: false, // Secure by default
 			},
 		},
 	}
 
 	manager := &ProxyManager{
-		config:     config,
+		config:     *config,
 		httpClient: httpClient,
 	}
 
@@ -293,7 +298,7 @@ func (pm *ProxyManager) initializeInstances() {
 }
 
 // Forward forwards the request to the selected instance
-func (pm *ProxyManager) Forward(c *gin.Context, config ProxyConfig) {
+func (pm *ProxyManager) Forward(c *gin.Context, config *ProxyConfig) {
 	// Check circuit breaker
 	if pm.circuitBreaker.IsOpen() {
 		c.JSON(503, gin.H{"error": "Service temporarily unavailable"})
@@ -419,9 +424,7 @@ func (pm *ProxyManager) buildTargetURL(instance *ProxyInstance, c *gin.Context) 
 		}
 
 		// Join with base URL
-		if strings.HasSuffix(baseURL, "/") {
-			baseURL = baseURL[:len(baseURL)-1]
-		}
+		baseURL = strings.TrimSuffix(baseURL, "/")
 		if !strings.HasPrefix(path, "/") {
 			path = "/" + path
 		}
@@ -440,7 +443,7 @@ func (pm *ProxyManager) buildTargetURL(instance *ProxyInstance, c *gin.Context) 
 }
 
 // calculateRetryDelay calculates delay for retry attempts
-func (pm *ProxyManager) calculateRetryDelay(attempt int, config ProxyConfig) time.Duration {
+func (pm *ProxyManager) calculateRetryDelay(attempt int, config *ProxyConfig) time.Duration {
 	baseDelay, _ := time.ParseDuration(config.RetryDelay)
 	if baseDelay == 0 {
 		baseDelay = time.Second

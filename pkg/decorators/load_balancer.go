@@ -34,8 +34,14 @@ func (lb *RoundRobinLoadBalancer) Select(instances []*ProxyInstance, _ *gin.Cont
 
 	// Get next index
 	next := atomic.AddUint64(&lb.current, 1)
-	// Safe conversion: len() returns int, which is always positive
-	index := int(next % uint64(len(healthyInstances)))
+	// Safe conversion: len() returns int, which is always positive and small
+	// This conversion is safe because len() is always >= 0 and typically small
+	instanceCount := len(healthyInstances)
+	if instanceCount == 0 {
+		return nil
+	}
+	// Safe conversion: instanceCount is always positive and small
+	index := int(next % uint64(instanceCount)) // nolint:gosec // Safe: instanceCount is small
 
 	return healthyInstances[index]
 }
@@ -94,8 +100,13 @@ func (lb *IPHashLoadBalancer) Select(instances []*ProxyInstance, c *gin.Context)
 	hashValue := uint64(hash[0])<<56 | uint64(hash[1])<<48 | uint64(hash[2])<<40 | uint64(hash[3])<<32 |
 		uint64(hash[4])<<24 | uint64(hash[5])<<16 | uint64(hash[6])<<8 | uint64(hash[7])
 
-	// Safe conversion: len() returns int, which is always positive
-	index := int(hashValue % uint64(len(healthyInstances)))
+	// Safe conversion: len() returns int, which is always positive and small
+	instanceCount := len(healthyInstances)
+	if instanceCount == 0 {
+		return nil
+	}
+	// Safe conversion: instanceCount is always positive and small
+	index := int(hashValue % uint64(instanceCount)) // nolint:gosec // Safe: instanceCount is small
 	return healthyInstances[index]
 }
 
@@ -129,8 +140,12 @@ func (lb *WeightedRoundRobinLoadBalancer) Select(instances []*ProxyInstance, _ *
 
 	// Get next index
 	next := atomic.AddUint64(&lb.current, 1)
-	// Safe conversion: totalWeight is always positive
-	weightedIndex := int(next % uint64(totalWeight))
+	// Safe conversion: totalWeight is always positive and typically small
+	if totalWeight <= 0 {
+		return healthyInstances[0]
+	}
+	// Safe conversion: totalWeight is always positive and small
+	weightedIndex := int(next % uint64(totalWeight)) // nolint:gosec // Safe: totalWeight is small
 
 	// Find instance based on weight
 	currentWeight := 0

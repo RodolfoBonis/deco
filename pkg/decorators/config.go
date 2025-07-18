@@ -575,7 +575,7 @@ func globToRegex(pattern string) (*regexp.Regexp, error) {
 
 // compilePatterns compiles pattern list to regex
 func compilePatterns(patterns []string) ([]*regexp.Regexp, error) {
-	var compiled []*regexp.Regexp
+	compiled := make([]*regexp.Regexp, 0, len(patterns))
 
 	for _, pattern := range patterns {
 		regex, err := globToRegex(pattern)

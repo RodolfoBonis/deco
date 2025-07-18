@@ -12,7 +12,7 @@ import (
 
 func TestProxyMiddleware(t *testing.T) {
 	// Create test server
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{"message": "success"}`))
@@ -28,18 +28,18 @@ func TestProxyMiddleware(t *testing.T) {
 	}
 
 	// Create proxy manager
-	manager := NewProxyManager(config)
+	manager := NewProxyManager(&config)
 
 	// Create Gin context
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 	router.GET("/test", func(c *gin.Context) {
-		manager.Forward(c, config)
+		manager.Forward(c, &config)
 	})
 
 	// Test request
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/test", nil)
+	req, _ := http.NewRequest("GET", "/test", http.NoBody)
 	router.ServeHTTP(w, req)
 
 	// Assertions
@@ -61,6 +61,7 @@ func TestLoadBalancerRoundRobin(t *testing.T) {
 	// Test round-robin selection
 	gin.SetMode(gin.TestMode)
 	c, _ := gin.CreateTestContext(httptest.NewRecorder())
+	_ = c // Use context to avoid unused variable warning
 
 	selected1 := lb.Select(instances, c)
 	selected2 := lb.Select(instances, c)
@@ -86,6 +87,7 @@ func TestLoadBalancerLeastConnections(t *testing.T) {
 
 	gin.SetMode(gin.TestMode)
 	c, _ := gin.CreateTestContext(httptest.NewRecorder())
+	_ = c // Use context to avoid unused variable warning
 
 	selected := lb.Select(instances, c)
 
@@ -127,7 +129,7 @@ func TestCircuitBreaker(t *testing.T) {
 
 func TestHealthChecker(t *testing.T) {
 	// Create test server
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer server.Close()
@@ -137,7 +139,7 @@ func TestHealthChecker(t *testing.T) {
 		Timeout:     "5s",
 	}
 
-	hc := NewHealthChecker(config)
+	hc := NewHealthChecker(&config)
 	instance := &ProxyInstance{URL: server.URL}
 
 	// Test health check
@@ -178,6 +180,7 @@ func TestBuildTargetURL(t *testing.T) {
 
 	gin.SetMode(gin.TestMode)
 	c, _ := gin.CreateTestContext(httptest.NewRecorder())
+	_ = c // Use context to avoid unused variable warning
 	c.Params = gin.Params{{Key: "id", Value: "123"}}
 
 	url := manager.buildTargetURL(instance, c)
@@ -194,9 +197,9 @@ func TestCalculateRetryDelay(t *testing.T) {
 	}
 
 	// Test exponential backoff
-	delay1 := manager.calculateRetryDelay(0, config)
-	delay2 := manager.calculateRetryDelay(1, config)
-	delay3 := manager.calculateRetryDelay(2, config)
+	delay1 := manager.calculateRetryDelay(0, &config)
+	delay2 := manager.calculateRetryDelay(1, &config)
+	delay3 := manager.calculateRetryDelay(2, &config)
 
 	assert.Equal(t, 1*time.Second, delay1)
 	assert.Equal(t, 2*time.Second, delay2)
@@ -204,9 +207,9 @@ func TestCalculateRetryDelay(t *testing.T) {
 
 	// Test linear backoff
 	config.RetryBackoff = "linear"
-	delay1 = manager.calculateRetryDelay(0, config)
-	delay2 = manager.calculateRetryDelay(1, config)
-	delay3 = manager.calculateRetryDelay(2, config)
+	delay1 = manager.calculateRetryDelay(0, &config)
+	delay2 = manager.calculateRetryDelay(1, &config)
+	delay3 = manager.calculateRetryDelay(2, &config)
 
 	assert.Equal(t, 1*time.Second, delay1)
 	assert.Equal(t, 2*time.Second, delay2)
@@ -241,7 +244,7 @@ func TestCreateCircuitBreaker(t *testing.T) {
 		CircuitBreaker:   "30s",
 	}
 
-	cb := createCircuitBreaker(config)
+	cb := createCircuitBreaker(&config)
 	assert.NotNil(t, cb)
 	assert.False(t, cb.IsOpen())
 }
@@ -252,7 +255,7 @@ func TestCreateHealthChecker(t *testing.T) {
 		Timeout:     "5s",
 	}
 
-	hc := createHealthChecker(config)
+	hc := createHealthChecker(&config)
 	assert.NotNil(t, hc)
 }
 
@@ -269,7 +272,7 @@ func TestCreateProxyMiddleware(t *testing.T) {
 	// Test that middleware is a valid gin.HandlerFunc
 	gin.SetMode(gin.TestMode)
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/test", nil)
+	req, _ := http.NewRequest("GET", "/test", http.NoBody)
 	c, _ := gin.CreateTestContext(w)
 	c.Request = req
 

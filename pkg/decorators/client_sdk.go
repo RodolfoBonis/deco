@@ -242,7 +242,7 @@ func (g *GoSDKGenerator) generateFunctionName(method, path string) string {
 }
 
 func (g *GoSDKGenerator) generateParametersSignature(params []OpenAPIParameter) string {
-	var parts []string
+	parts := make([]string, 0, len(params))
 	for _, param := range params {
 		goType := g.convertTypeToGo(param.Schema.Type)
 		parts = append(parts, fmt.Sprintf(", %s %s", param.Name, goType))
@@ -483,7 +483,7 @@ func (p *PythonSDKGenerator) generateFunctionName(method, path string) string {
 }
 
 func (p *PythonSDKGenerator) generateParametersSignature(params []OpenAPIParameter) string {
-	var parts []string
+	parts := make([]string, 0, len(params))
 	for _, param := range params {
 		pythonType := p.convertTypeToPython(param.Schema.Type)
 		parts = append(parts, fmt.Sprintf(", %s: %s", param.Name, pythonType))
@@ -683,7 +683,7 @@ func (j *JavaScriptSDKGenerator) generateFunctionName(method, path string) strin
 }
 
 func (j *JavaScriptSDKGenerator) generateParametersSignature(params []OpenAPIParameter) string {
-	var parts []string
+	parts := make([]string, 0, len(params))
 	for _, param := range params {
 		parts = append(parts, param.Name)
 	}
@@ -870,7 +870,7 @@ func (t *TypeScriptSDKGenerator) generateFunctionName(method, path string) strin
 }
 
 func (t *TypeScriptSDKGenerator) generateParametersSignature(params []OpenAPIParameter) string {
-	var parts []string
+	parts := make([]string, 0, len(params))
 	for _, param := range params {
 		tsType := t.convertTypeToTypeScript(param.Schema.Type)
 		parts = append(parts, fmt.Sprintf("%s: %s", param.Name, tsType))

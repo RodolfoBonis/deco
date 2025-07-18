@@ -299,109 +299,157 @@ func handleGenerateCommand(configPath, rootDir, outputPath, packageName, templat
 
 // handleLegacyMode executes generation in legacy mode (compatibility)
 func handleLegacyMode(rootDir, outputPath, packageName, templatePath string, validate, verbose bool, startTime time.Time) error {
-	// Validate legacy arguments
-	if rootDir == "" {
-		return fmt.Errorf("root directory is required (-root)")
+	if err := validateLegacyArgs(rootDir); err != nil {
+		return err
 	}
 
 	// Force use of .deco folder in root (not customizable)
+	outputPath, packageName = setupLegacyPaths(outputPath, packageName, verbose)
+
+	absRootDir, absOutputPath, err := resolveLegacyPaths(rootDir, outputPath)
+	if err != nil {
+		return err
+	}
+
+	if err := verifyRootDirectory(absRootDir); err != nil {
+		return err
+	}
+
+	logLegacyInfo(absRootDir, absOutputPath, packageName, verbose)
+
+	if err := generateLegacyFile(absRootDir, absOutputPath, packageName, templatePath, verbose); err != nil {
+		return err
+	}
+
+	if err := validateLegacyFile(validate, verbose); err != nil {
+		return err
+	}
+
+	logLegacyCompletion(startTime, absOutputPath, verbose)
+
+	return nil
+}
+
+// validateLegacyArgs validates legacy mode arguments
+func validateLegacyArgs(rootDir string) error {
+	if rootDir == "" {
+		return fmt.Errorf("root directory is required (-root)")
+	}
+	return nil
+}
+
+// setupLegacyPaths sets up legacy paths and logs warnings
+func setupLegacyPaths(outputPath, packageName string, verbose bool) (outputPathResult, packageNameResult string) {
 	if outputPath != "" && verbose {
 		log.Printf("⚠️  Ignoring -out: always uses ./.deco/init_decorators.go")
 	}
 	if packageName != "" && verbose {
 		log.Printf("⚠️  Ignoring -pkg: always uses package deco")
 	}
+	return "./.deco/init_decorators.go", "deco"
+}
 
-	outputPath = "./.deco/init_decorators.go"
-	packageName = "deco"
-
-	// Convert to absolute paths
-	absRootDir, err := filepath.Abs(rootDir)
+// resolveLegacyPaths resolves absolute paths for legacy mode
+func resolveLegacyPaths(rootDir, outputPath string) (absRootDir, absOutputPath string, err error) {
+	absRootDir, err = filepath.Abs(rootDir)
 	if err != nil {
-		return fmt.Errorf("error resolving root path: %v", err)
+		return "", "", fmt.Errorf("error resolving root path: %v", err)
 	}
 
-	absOutputPath, err := filepath.Abs(outputPath)
+	absOutputPath, err = filepath.Abs(outputPath)
 	if err != nil {
-		return fmt.Errorf("error resolving output path: %v", err)
+		return "", "", fmt.Errorf("error resolving output path: %v", err)
 	}
 
-	// Verify if root directory exists
+	return absRootDir, absOutputPath, nil
+}
+
+// verifyRootDirectory verifies that the root directory exists
+func verifyRootDirectory(absRootDir string) error {
 	if _, err := os.Stat(absRootDir); os.IsNotExist(err) {
 		return fmt.Errorf("root directory not found: %s", absRootDir)
 	}
+	return nil
+}
 
-	// Initial log
+// logLegacyInfo logs legacy mode information
+func logLegacyInfo(absRootDir, absOutputPath, packageName string, verbose bool) {
 	if verbose {
 		log.Printf("🔍 Analyzing directory: %s", absRootDir)
 		log.Printf("📄 Output file: %s", absOutputPath)
 		log.Printf("📦 Package name: %s", packageName)
 	}
+}
 
-	// Generate file using legacy method
-	var genErr error
+// generateLegacyFile generates the file using legacy method
+func generateLegacyFile(absRootDir, absOutputPath, packageName, templatePath string, verbose bool) error {
 	if templatePath != "" {
-		// Use custom template
-		absTemplatePath, err := filepath.Abs(templatePath)
-		if err != nil {
-			return fmt.Errorf("error resolving template path: %v", err)
-		}
+		return generateWithCustomTemplate(absRootDir, absOutputPath, packageName, templatePath, verbose)
+	}
+	return generateWithDefaultConfig(absRootDir, absOutputPath, packageName)
+}
 
-		if verbose {
-			log.Printf("🎨 Using custom template: %s", absTemplatePath)
-		}
-
-		genErr = decorators.GenerateFromTemplate(absRootDir, absTemplatePath, absOutputPath, packageName)
-	} else {
-		// Load configuration for legacy mode
-		config, configErr := decorators.LoadConfig("")
-		if configErr != nil {
-			config = decorators.DefaultConfig()
-		}
-
-		// Use default template with configuration
-		genErr = decorators.GenerateInitFileWithConfig(absRootDir, absOutputPath, packageName, config)
+// generateWithCustomTemplate generates file with custom template
+func generateWithCustomTemplate(absRootDir, absOutputPath, packageName, templatePath string, verbose bool) error {
+	absTemplatePath, err := filepath.Abs(templatePath)
+	if err != nil {
+		return fmt.Errorf("error resolving template path: %v", err)
 	}
 
-	if genErr != nil {
-		return genErr
+	if verbose {
+		log.Printf("🎨 Using custom template: %s", absTemplatePath)
 	}
 
-	// Validation is now done automatically within GenerateInitFileWithConfig if enabled
-	// Manual validation only if not done automatically
-	if validate {
-		// Verify if validation was already done automatically
-		config, _ := decorators.LoadConfig("")
-		if config == nil || !config.Prod.Validate {
-			if verbose {
-				log.Printf("✅ Validating generated file...")
-			}
+	return decorators.GenerateFromTemplate(absRootDir, absTemplatePath, absOutputPath, packageName)
+}
 
-			if err := decorators.ValidateGeneration(absOutputPath); err != nil {
-				enhancedErr := enhanceErrorWithSourceInfo(err, ".deco.yaml")
-				return fmt.Errorf("validation failed: %v", enhancedErr)
-			}
+// generateWithDefaultConfig generates file with default configuration
+func generateWithDefaultConfig(absRootDir, absOutputPath, packageName string) error {
+	config, configErr := decorators.LoadConfig("")
+	if configErr != nil {
+		config = decorators.DefaultConfig()
+	}
+	return decorators.GenerateInitFileWithConfig(absRootDir, absOutputPath, packageName, config)
+}
 
-			if verbose {
-				log.Printf("✅ File validated successfully")
-			}
-		}
+// validateLegacyFile validates the generated file if needed
+func validateLegacyFile(validate, verbose bool) error {
+	if !validate {
+		return nil
 	}
 
-	// Final statistics
+	config, _ := decorators.LoadConfig("")
+	if config != nil && config.Prod.Validate {
+		return nil // Already validated automatically
+	}
+
+	if verbose {
+		log.Printf("✅ Validating generated file...")
+	}
+
+	if err := decorators.ValidateGeneration("./.deco/init_decorators.go"); err != nil {
+		enhancedErr := enhanceErrorWithSourceInfo(err, ".deco.yaml")
+		return fmt.Errorf("validation failed: %v", enhancedErr)
+	}
+
+	if verbose {
+		log.Printf("✅ File validated successfully")
+	}
+
+	return nil
+}
+
+// logLegacyCompletion logs completion information
+func logLegacyCompletion(startTime time.Time, absOutputPath string, verbose bool) {
 	duration := time.Since(startTime)
-
 	log.Printf("✅ Generation completed in %v", duration)
 	log.Printf("📁 File created: %s", absOutputPath)
 
-	// Show next steps
 	if verbose {
 		log.Printf("\n📋 Next steps:")
 		log.Printf("   1. Run: go build -tags prod")
 		log.Printf("   2. File %s will be used in production", filepath.Base(absOutputPath))
 	}
-
-	return nil
 }
 
 // generateFromFilesWithConfig generates code with specific configuration
@@ -612,46 +660,41 @@ func (ds *DevServer) startWatcherWithCallback() error {
 
 // watchFiles processes file watcher events
 func (ds *DevServer) watchFiles() {
-	// Debouncing to avoid multiple regenerations
-	var debounceTimer *time.Timer
-	debounceDuration := 500 * time.Millisecond
-
-	regenerate := func() {
-		if ds.Verbose {
-			fmt.Println("🔄 Changes detected, regenerating...")
-		}
-
-		// Regenerate code
-		if err := handleGenerateCommand(ds.ConfigFile, "", "", "", "", true, false); err != nil {
-			// Enhanced error reporting with source file information
-			enhancedErr := enhanceErrorWithSourceInfo(err, ds.ConfigFile)
-			fmt.Printf("❌ Error in regeneration: %v\n", enhancedErr)
-			ds.ErrorChan <- enhancedErr
-			return
-		}
-
-		if ds.Verbose {
-			fmt.Println("✅ Code regenerated, restarting server...")
-		}
-
-		// Signal reload
-		select {
-		case ds.ReloadChan <- true:
-		default:
-			// Channel full, ignore
-		}
+	watcher, monitoredDirs, err := ds.setupFileWatcher()
+	if err != nil {
+		fmt.Printf("❌ Error setting up file watcher: %v\n", err)
+		return
 	}
+	defer watcher.Close()
 
-	// Use real file watching system
-	// Discover and monitor files
+	ds.addDirectoriesToWatcher(watcher, monitoredDirs)
+	ds.processWatcherEvents(watcher)
+}
+
+// setupFileWatcher sets up the file watcher and discovers monitored directories
+func (ds *DevServer) setupFileWatcher() (*fsnotify.Watcher, map[string]bool, error) {
 	wd, _ := filepath.Abs(".")
 	handlerFiles, err := ds.Config.DiscoverHandlers(wd)
 	if err != nil {
-		fmt.Printf("❌ Error discovering handlers: %v\n", err)
-		return
+		return nil, nil, fmt.Errorf("error discovering handlers: %v", err)
 	}
 
-	// Monitor handler directories
+	monitoredDirs := ds.getMonitoredDirectories(handlerFiles)
+
+	if ds.Verbose {
+		fmt.Printf("🔍 Monitoring directories: %v\n", getKeys(monitoredDirs))
+	}
+
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		return nil, nil, fmt.Errorf("error creating fsnotify watcher: %v", err)
+	}
+
+	return watcher, monitoredDirs, nil
+}
+
+// getMonitoredDirectories gets the directories to monitor from handler files
+func (ds *DevServer) getMonitoredDirectories(handlerFiles []string) map[string]bool {
 	monitoredDirs := make(map[string]bool)
 	for _, file := range handlerFiles {
 		dir := filepath.Dir(file)
@@ -659,22 +702,11 @@ func (ds *DevServer) watchFiles() {
 			monitoredDirs[dir] = true
 		}
 	}
+	return monitoredDirs
+}
 
-	// DO NOT monitor .deco directory to avoid infinite loop
-
-	if ds.Verbose {
-		fmt.Printf("🔍 Monitoring directories: %v\n", getKeys(monitoredDirs))
-	}
-
-	// Create a custom watcher using fsnotify
-	watcher, err := fsnotify.NewWatcher()
-	if err != nil {
-		fmt.Printf("❌ Error creating fsnotify watcher: %v\n", err)
-		return
-	}
-	defer watcher.Close()
-
-	// Add directories to watcher
+// addDirectoriesToWatcher adds directories to the file watcher
+func (ds *DevServer) addDirectoriesToWatcher(watcher *fsnotify.Watcher, monitoredDirs map[string]bool) {
 	for dir := range monitoredDirs {
 		if err := watcher.Add(dir); err != nil {
 			fmt.Printf("⚠️ Error monitoring directory %s: %v\n", dir, err)
@@ -682,27 +714,20 @@ func (ds *DevServer) watchFiles() {
 			fmt.Printf("👀 Monitoring directory: %s\n", dir)
 		}
 	}
+}
 
-	// Event loop
+// processWatcherEvents processes file watcher events
+func (ds *DevServer) processWatcherEvents(watcher *fsnotify.Watcher) {
+	var debounceTimer *time.Timer
+	debounceDuration := 500 * time.Millisecond
+
 	for {
 		select {
 		case event, ok := <-watcher.Events:
 			if !ok {
 				return
 			}
-
-			// Filter only relevant .go files
-			if ds.shouldProcessEvent(event) {
-				if ds.Verbose {
-					fmt.Printf("📁 Modified: %s\n", event.Name)
-				}
-
-				// Debounce
-				if debounceTimer != nil {
-					debounceTimer.Stop()
-				}
-				debounceTimer = time.AfterFunc(debounceDuration, regenerate)
-			}
+			ds.handleWatcherEvent(event, &debounceTimer, debounceDuration)
 
 		case err, ok := <-watcher.Errors:
 			if !ok {
@@ -710,6 +735,50 @@ func (ds *DevServer) watchFiles() {
 			}
 			fmt.Printf("❌ Error in file watcher: %v\n", err)
 		}
+	}
+}
+
+// handleWatcherEvent handles a single watcher event
+func (ds *DevServer) handleWatcherEvent(event fsnotify.Event, debounceTimer **time.Timer, debounceDuration time.Duration) {
+	if !ds.shouldProcessEvent(event) {
+		return
+	}
+
+	if ds.Verbose {
+		fmt.Printf("📁 Modified: %s\n", event.Name)
+	}
+
+	// Debounce
+	if *debounceTimer != nil {
+		(*debounceTimer).Stop()
+	}
+	*debounceTimer = time.AfterFunc(debounceDuration, ds.regenerateCode)
+}
+
+// regenerateCode regenerates the code and signals reload
+func (ds *DevServer) regenerateCode() {
+	if ds.Verbose {
+		fmt.Println("🔄 Changes detected, regenerating...")
+	}
+
+	// Regenerate code
+	if err := handleGenerateCommand(ds.ConfigFile, "", "", "", "", true, false); err != nil {
+		// Enhanced error reporting with source file information
+		enhancedErr := enhanceErrorWithSourceInfo(err, ds.ConfigFile)
+		fmt.Printf("❌ Error in regeneration: %v\n", enhancedErr)
+		ds.ErrorChan <- enhancedErr
+		return
+	}
+
+	if ds.Verbose {
+		fmt.Println("✅ Code regenerated, restarting server...")
+	}
+
+	// Signal reload
+	select {
+	case ds.ReloadChan <- true:
+	default:
+		// Channel full, ignore
 	}
 }
 

@@ -136,7 +136,7 @@ func (cb *CircuitBreakerImpl) GetStats() map[string]interface{} {
 }
 
 // createCircuitBreaker creates a circuit breaker from configuration
-func createCircuitBreaker(config ProxyConfig) CircuitBreaker {
+func createCircuitBreaker(config *ProxyConfig) CircuitBreaker {
 	failureThreshold := config.FailureThreshold
 	if failureThreshold == 0 {
 		failureThreshold = DefaultFailureThreshold

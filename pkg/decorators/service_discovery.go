@@ -48,7 +48,7 @@ func (cd *ConsulDiscovery) Discover(service string) ([]*ProxyInstance, error) {
 		return nil, fmt.Errorf("failed to query Consul: %v", err)
 	}
 
-	var instances []*ProxyInstance
+	instances := make([]*ProxyInstance, 0, len(services))
 	for _, service := range services {
 		instance := &ProxyInstance{
 			URL:       fmt.Sprintf("http://%s:%d", service.Service.Address, service.Service.Port),
@@ -85,7 +85,7 @@ func (dd *DNSDiscovery) Discover(service string) ([]*ProxyInstance, error) {
 		return nil, fmt.Errorf("failed to resolve DNS for %s: %v", service, err)
 	}
 
-	var instances []*ProxyInstance
+	instances := make([]*ProxyInstance, 0, len(ips))
 	for _, ip := range ips {
 		// Assume HTTP on port 80 for DNS discovery
 		instance := &ProxyInstance{
@@ -129,7 +129,7 @@ func (kd *K8sDiscovery) Discover(service string) ([]*ProxyInstance, error) {
 		return nil, fmt.Errorf("failed to resolve Kubernetes service %s: %v", k8sServiceName, err)
 	}
 
-	var instances []*ProxyInstance
+	instances := make([]*ProxyInstance, 0, len(ips))
 	for _, ip := range ips {
 		// Assume HTTP on port 80 for Kubernetes services
 		instance := &ProxyInstance{
@@ -161,8 +161,8 @@ func NewStaticDiscovery(targets []string) *StaticDiscovery {
 }
 
 // Discover returns the static targets as instances
-func (sd *StaticDiscovery) Discover(service string) ([]*ProxyInstance, error) {
-	var instances []*ProxyInstance
+func (sd *StaticDiscovery) Discover(_ string) ([]*ProxyInstance, error) {
+	instances := make([]*ProxyInstance, 0, len(sd.targets))
 
 	for _, target := range sd.targets {
 		instance := &ProxyInstance{

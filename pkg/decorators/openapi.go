@@ -805,7 +805,7 @@ func OpenAPIYAMLHandler(config *Config) gin.HandlerFunc {
 }
 
 // SwaggerUIHandler creates Swagger UI handler with customizable settings via config
-func SwaggerUIHandler(config *Config) gin.HandlerFunc {
+func SwaggerUIHandler(_ *Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Use config to customize Swagger UI settings
 		swaggerURL := "/decorators/openapi.json"

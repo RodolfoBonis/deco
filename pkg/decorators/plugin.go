@@ -106,7 +106,12 @@ func GetGeneratorHooks() []GeneratorHook {
 
 // Example plugin that adds automatic logging
 func init() {
-	// Automatic logging plugin
+	registerLoggingPlugin()
+	registerImportsPlugin()
+}
+
+// registerLoggingPlugin registers the logging plugin
+func registerLoggingPlugin() {
 	RegisterParserHook(func(routes []*RouteMeta) error {
 		LogVerbose("Plugin de logging: %d routes processadas", len(routes))
 		for _, route := range routes {
@@ -114,68 +119,89 @@ func init() {
 		}
 		return nil
 	})
+}
 
-	// Plugin that adds default imports
+// registerImportsPlugin registers the imports plugin
+func registerImportsPlugin() {
 	RegisterGeneratorHook(func(data *GenData) error {
-		// Ensure necessary imports
-		requiredImports := []string{
-			`deco "github.com/RodolfoBonis/deco"`,
-		}
-
-		// If the generated package is deco, add handlers import
-		if data.PackageName == "deco" && len(data.Routes) > 0 {
-			// Automatically detect handlers path based on the first route
-			firstRoute := data.Routes[0]
-			if firstRoute.PackageName == "handlers" {
-				// Detect current directory to build relative import
-				wd, err := os.Getwd()
-				if err == nil {
-					// Check if go.mod exists to extract module name
-					if modName := getModuleName(wd); modName != "" {
-						// Build handlers path based on working directory
-						handlerImport := ""
-
-						// Remove part of module path from working directory to get relative path
-						if strings.Contains(wd, modName) {
-							// Extract part after module name
-							parts := strings.Split(wd, modName)
-							if len(parts) > 1 {
-								relativePath := strings.TrimPrefix(parts[1], "/")
-								if relativePath != "" {
-									handlerImport = fmt.Sprintf(`handlers "%s/%s/handlers"`, modName, relativePath)
-								} else {
-									handlerImport = fmt.Sprintf(`handlers "%s/handlers"`, modName)
-								}
-							}
-						} else {
-							// Fallback - assume default structure
-							handlerImport = fmt.Sprintf(`handlers "%s/handlers"`, modName)
-						}
-
-						if handlerImport != "" {
-							requiredImports = append(requiredImports, handlerImport)
-						}
-					}
-				}
-			}
-		}
-
-		for _, imp := range requiredImports {
-			found := false
-			for _, existing := range data.Imports {
-				if existing == imp {
-					found = true
-					break
-				}
-			}
-			if !found {
-				data.Imports = append(data.Imports, imp)
-			}
-		}
-
+		requiredImports := getRequiredImports(data)
+		addMissingImports(data, requiredImports)
 		LogVerbose("Plugin de imports: %d imports configurados", len(data.Imports))
 		return nil
 	})
+}
+
+// getRequiredImports returns the list of required imports
+func getRequiredImports(data *GenData) []string {
+	requiredImports := []string{
+		`deco "github.com/RodolfoBonis/deco"`,
+	}
+
+	if shouldAddHandlersImport(data) {
+		if handlerImport := buildHandlersImport(); handlerImport != "" {
+			requiredImports = append(requiredImports, handlerImport)
+		}
+	}
+
+	return requiredImports
+}
+
+// shouldAddHandlersImport checks if handlers import should be added
+func shouldAddHandlersImport(data *GenData) bool {
+	return data.PackageName == "deco" && len(data.Routes) > 0 && data.Routes[0].PackageName == "handlers"
+}
+
+// buildHandlersImport builds the handlers import path
+func buildHandlersImport() string {
+	wd, err := os.Getwd()
+	if err != nil {
+		return ""
+	}
+
+	modName := getModuleName(wd)
+	if modName == "" {
+		return ""
+	}
+
+	return buildImportPath(wd, modName)
+}
+
+// buildImportPath builds the import path based on working directory and module name
+func buildImportPath(wd, modName string) string {
+	if !strings.Contains(wd, modName) {
+		return fmt.Sprintf(`handlers "%s/handlers"`, modName)
+	}
+
+	parts := strings.Split(wd, modName)
+	if len(parts) <= 1 {
+		return fmt.Sprintf(`handlers "%s/handlers"`, modName)
+	}
+
+	relativePath := strings.TrimPrefix(parts[1], "/")
+	if relativePath == "" {
+		return fmt.Sprintf(`handlers "%s/handlers"`, modName)
+	}
+
+	return fmt.Sprintf(`handlers "%s/%s/handlers"`, modName, relativePath)
+}
+
+// addMissingImports adds missing imports to the data
+func addMissingImports(data *GenData, requiredImports []string) {
+	for _, imp := range requiredImports {
+		if !containsImport(data.Imports, imp) {
+			data.Imports = append(data.Imports, imp)
+		}
+	}
+}
+
+// containsImport checks if an import already exists
+func containsImport(imports []string, imp string) bool {
+	for _, existing := range imports {
+		if existing == imp {
+			return true
+		}
+	}
+	return false
 }
 
 // getModuleName extracts module name from go.mod

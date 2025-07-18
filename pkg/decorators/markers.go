@@ -353,7 +353,7 @@ func parseKeyValue(input, key string) string {
 
 // createValidateMiddleware creates general validation middleware
 // Cannot customize required fields via args, as it depends on the validated struct
-func createValidateMiddleware(args []string) gin.HandlerFunc {
+func createValidateMiddleware(_ []string) gin.HandlerFunc {
 	// Args ignored, as validation depends on the struct
 	config := DefaultConfig().Validation
 	return ValidateStruct(&config)
@@ -485,12 +485,12 @@ func createCacheByUserMiddleware(args []string) gin.HandlerFunc {
 }
 
 // createPrometheusMiddleware creates Prometheus metrics middleware (no customizable args at the moment)
-func createPrometheusMiddleware(args []string) gin.HandlerFunc {
+func createPrometheusMiddleware(_ []string) gin.HandlerFunc {
 	return PrometheusHandler()
 }
 
 // createHealthCheckMiddleware creates health check middleware (no customizable args at the moment)
-func createHealthCheckMiddleware(args []string) gin.HandlerFunc {
+func createHealthCheckMiddleware(_ []string) gin.HandlerFunc {
 	return HealthCheckHandler()
 }
 
@@ -525,29 +525,29 @@ func createInvalidateCacheMiddleware(args []string) gin.HandlerFunc {
 }
 
 // createWebSocketStatsMiddleware creates WebSocket statistics middleware (no customizable args at the moment)
-func createWebSocketStatsMiddleware(args []string) gin.HandlerFunc {
+func createWebSocketStatsMiddleware(_ []string) gin.HandlerFunc {
 	return WebSocketStatsHandler()
 }
 
 // createTracingStatsMiddleware creates tracing statistics middleware (no customizable args at the moment)
-func createTracingStatsMiddleware(args []string) gin.HandlerFunc {
+func createTracingStatsMiddleware(_ []string) gin.HandlerFunc {
 	return TracingStatsHandler()
 }
 
 // createOpenAPIJSONMiddleware creates OpenAPI JSON middleware (no customizable args at the moment)
-func createOpenAPIJSONMiddleware(args []string) gin.HandlerFunc {
+func createOpenAPIJSONMiddleware(_ []string) gin.HandlerFunc {
 	config := DefaultConfig()
 	return OpenAPIJSONHandler(config)
 }
 
 // createOpenAPIYAMLMiddleware creates OpenAPI YAML middleware (no customizable args at the moment)
-func createOpenAPIYAMLMiddleware(args []string) gin.HandlerFunc {
+func createOpenAPIYAMLMiddleware(_ []string) gin.HandlerFunc {
 	config := DefaultConfig()
 	return OpenAPIYAMLHandler(config)
 }
 
 // createSwaggerUIMiddleware creates Swagger UI middleware (no customizable args at the moment)
-func createSwaggerUIMiddleware(args []string) gin.HandlerFunc {
+func createSwaggerUIMiddleware(_ []string) gin.HandlerFunc {
 	config := DefaultConfig()
 	return SwaggerUIHandler(config)
 }
@@ -616,7 +616,7 @@ func createRateLimitByEndpointMiddleware(args []string) gin.HandlerFunc {
 }
 
 // createHealthCheckWithTracingMiddleware creates health check with tracing (no customizable args at the moment)
-func createHealthCheckWithTracingMiddleware(args []string) gin.HandlerFunc {
+func createHealthCheckWithTracingMiddleware(_ []string) gin.HandlerFunc {
 	return HealthCheckWithTracing()
 }
 

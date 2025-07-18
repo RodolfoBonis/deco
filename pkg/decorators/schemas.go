@@ -42,7 +42,7 @@ func parseEntityFromStruct(_ *token.FileSet, fileName string, structDecl *ast.Ge
 	}
 
 	// Join all comments
-	var comments []string
+	comments := make([]string, 0, len(structDecl.Doc.List))
 	for _, comment := range structDecl.Doc.List {
 		comments = append(comments, comment.Text)
 	}
