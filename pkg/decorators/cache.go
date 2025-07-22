@@ -49,6 +49,7 @@ type CacheStats struct {
 type MemoryCache struct {
 	mu      sync.RWMutex
 	data    map[string]*CacheEntry
+	access  map[string]time.Time // Track last access time for LRU
 	maxSize int
 	stats   CacheStats
 }
@@ -66,7 +67,7 @@ type CacheKeyFunc func(c *gin.Context) string
 // Default cache key generation functions
 var (
 	URLCacheKey = func(c *gin.Context) string {
-		return fmt.Sprintf("cache:url:%s:%s", c.Request.Method, c.Request.URL.String())
+		return fmt.Sprintf("cache:url:%s:%s", c.Request.Method, c.Request.URL.Path)
 	}
 
 	UserURLCacheKey = func(c *gin.Context) string {
@@ -74,11 +75,15 @@ var (
 		if userID == "" {
 			userID = "anonymous"
 		}
-		return fmt.Sprintf("cache:user:%s:url:%s:%s", userID, c.Request.Method, c.Request.URL.String())
+		return fmt.Sprintf("cache:user:%s:url:%s:%s", userID, c.Request.Method, c.Request.URL.Path)
 	}
 
 	EndpointCacheKey = func(c *gin.Context) string {
-		return fmt.Sprintf("cache:endpoint:%s:%s", c.Request.Method, c.FullPath())
+		path := c.FullPath()
+		if path == "" {
+			path = c.Request.URL.Path
+		}
+		return fmt.Sprintf("cache:endpoint:%s:%s", c.Request.Method, path)
 	}
 )
 
@@ -86,15 +91,23 @@ var (
 func NewMemoryCache(maxSize int) *MemoryCache {
 	return &MemoryCache{
 		data:    make(map[string]*CacheEntry),
+		access:  make(map[string]time.Time),
 		maxSize: maxSize,
 		stats:   CacheStats{MaxSize: int64(maxSize)},
 	}
 }
 
 // Get retrieves cache entry (in-memory implementation)
-func (m *MemoryCache) Get(_ context.Context, key string) (*CacheEntry, error) {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
+func (m *MemoryCache) Get(ctx context.Context, key string) (*CacheEntry, error) {
+	// Use context for timeout and cancellation
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+	}
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
 
 	entry, exists := m.data[key]
 	if !exists {
@@ -105,17 +118,16 @@ func (m *MemoryCache) Get(_ context.Context, key string) (*CacheEntry, error) {
 
 	// Check if expired
 	if time.Now().After(entry.ExpiresAt) {
-		m.mu.RUnlock()
-		m.mu.Lock()
 		delete(m.data, key)
+		delete(m.access, key)
 		m.stats.Evictions++
-		m.mu.Unlock()
-		m.mu.RLock()
-
 		m.stats.Misses++
 		m.updateHitRate()
 		return nil, nil
 	}
+
+	// Update access time for LRU
+	m.access[key] = time.Now()
 
 	m.stats.Hits++
 	m.updateHitRate()
@@ -123,31 +135,40 @@ func (m *MemoryCache) Get(_ context.Context, key string) (*CacheEntry, error) {
 }
 
 // Set stores cache entry (in-memory implementation)
-func (m *MemoryCache) Set(_ context.Context, key string, entry *CacheEntry, ttl time.Duration) error {
+func (m *MemoryCache) Set(ctx context.Context, key string, entry *CacheEntry, ttl time.Duration) error {
+	// Use context for timeout and cancellation
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
+
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	// Check size limit
 	if len(m.data) >= m.maxSize {
-		// Simple LRU: remove oldest entry
+		// Simple LRU: remove least recently used entry
 		var oldestKey string
 		var oldestTime = time.Now()
 
-		for k, v := range m.data {
-			if v.ExpiresAt.Before(oldestTime) {
-				oldestTime = v.ExpiresAt
+		for k, accessTime := range m.access {
+			if accessTime.Before(oldestTime) {
+				oldestTime = accessTime
 				oldestKey = k
 			}
 		}
 
 		if oldestKey != "" {
 			delete(m.data, oldestKey)
+			delete(m.access, oldestKey)
 			m.stats.Evictions++
 		}
 	}
 
 	entry.ExpiresAt = time.Now().Add(ttl)
 	m.data[key] = entry
+	m.access[key] = time.Now() // Set initial access time
 	m.stats.Sets++
 	m.stats.Size = int64(len(m.data))
 
@@ -155,12 +176,20 @@ func (m *MemoryCache) Set(_ context.Context, key string, entry *CacheEntry, ttl 
 }
 
 // Delete removes cache entry (in-memory implementation)
-func (m *MemoryCache) Delete(_ context.Context, key string) error {
+func (m *MemoryCache) Delete(ctx context.Context, key string) error {
+	// Use context for timeout and cancellation
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
+
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	if _, exists := m.data[key]; exists {
 		delete(m.data, key)
+		delete(m.access, key)
 		m.stats.Deletes++
 		m.stats.Size = int64(len(m.data))
 	}
@@ -169,11 +198,19 @@ func (m *MemoryCache) Delete(_ context.Context, key string) error {
 }
 
 // Clear clears entire cache (in-memory implementation)
-func (m *MemoryCache) Clear(_ context.Context) error {
+func (m *MemoryCache) Clear(ctx context.Context) error {
+	// Use context for timeout and cancellation
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
+
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	m.data = make(map[string]*CacheEntry)
+	m.access = make(map[string]time.Time)
 	m.stats.Size = 0
 
 	return nil

@@ -4,6 +4,9 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strconv"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -37,7 +40,10 @@ type TracingInfo struct {
 }
 
 // defaultTelemetryManager global instance
-var defaultTelemetryManager *TelemetryManager
+var (
+	defaultTelemetryManager *TelemetryManager
+	telemetryMutex          sync.RWMutex
+)
 
 // InitTelemetry initializes OpenTelemetry
 func InitTelemetry(config *TelemetryConfig) (*TelemetryManager, error) {
@@ -92,7 +98,9 @@ func InitTelemetry(config *TelemetryConfig) (*TelemetryManager, error) {
 		provider: provider,
 	}
 
+	telemetryMutex.Lock()
 	defaultTelemetryManager = manager
+	telemetryMutex.Unlock()
 	return manager, nil
 }
 
@@ -113,16 +121,29 @@ func TracingMiddleware(config *TelemetryConfig) gin.HandlerFunc {
 	}
 
 	// Initialize if necessary
-	if defaultTelemetryManager == nil {
-		manager, err := InitTelemetry(config)
-		if err != nil {
-			// Log error and continue without tracing
-			fmt.Printf("Error ao inicializar telemetria: %v\n", err)
-			return gin.HandlerFunc(func(c *gin.Context) {
-				c.Next()
-			})
+	telemetryMutex.RLock()
+	manager := defaultTelemetryManager
+	telemetryMutex.RUnlock()
+
+	if manager == nil {
+		telemetryMutex.Lock()
+		// Double-check after acquiring lock
+		if defaultTelemetryManager == nil {
+			var err error
+			manager, err = InitTelemetry(config)
+			if err != nil {
+				// Log error and continue without tracing
+				fmt.Printf("Error ao inicializar telemetria: %v\n", err)
+				telemetryMutex.Unlock()
+				return gin.HandlerFunc(func(c *gin.Context) {
+					c.Next()
+				})
+			}
+			defaultTelemetryManager = manager
+		} else {
+			manager = defaultTelemetryManager
 		}
-		defaultTelemetryManager = manager
+		telemetryMutex.Unlock()
 	}
 
 	return func(c *gin.Context) {
@@ -138,7 +159,7 @@ func TracingMiddleware(config *TelemetryConfig) gin.HandlerFunc {
 			spanName = fmt.Sprintf("%s %s", c.Request.Method, c.Request.URL.Path)
 		}
 
-		ctx, span := defaultTelemetryManager.tracer.Start(ctx, spanName)
+		ctx, span := manager.tracer.Start(ctx, spanName)
 		defer span.End()
 
 		// Add atributos ao span
@@ -193,10 +214,14 @@ func TracingMiddleware(config *TelemetryConfig) gin.HandlerFunc {
 
 // StartSpan starts a new span
 func StartSpan(ctx context.Context, name string) (context.Context, trace.Span) {
-	if defaultTelemetryManager == nil {
+	telemetryMutex.RLock()
+	manager := defaultTelemetryManager
+	telemetryMutex.RUnlock()
+
+	if manager == nil {
 		return ctx, trace.SpanFromContext(ctx)
 	}
-	return defaultTelemetryManager.tracer.Start(ctx, name)
+	return manager.tracer.Start(ctx, name)
 }
 
 // SpanFromContext extracts span from context
@@ -365,9 +390,32 @@ func TracingStatsHandler() gin.HandlerFunc {
 	}
 }
 
-// createTelemetryMiddleware creates telemetry middleware (for markers.go)
-func createTelemetryMiddleware(_ []string) gin.HandlerFunc {
+// createTelemetryMiddleware creates telemetry middleware with customizable settings via args
+func createTelemetryMiddleware(args []string) gin.HandlerFunc {
 	config := DefaultConfig().Telemetry
+
+	// Parse custom settings from args
+	for _, arg := range args {
+		if strings.HasPrefix(arg, "sampleRate=") {
+			v := strings.TrimPrefix(arg, "sampleRate=")
+			if rate, err := strconv.ParseFloat(v, 64); err == nil && rate >= 0 && rate <= 1 {
+				config.SampleRate = rate
+			}
+		}
+		if strings.HasPrefix(arg, "serviceName=") {
+			v := strings.TrimPrefix(arg, "serviceName=")
+			config.ServiceName = v
+		}
+		if strings.HasPrefix(arg, "environment=") {
+			v := strings.TrimPrefix(arg, "environment=")
+			config.Environment = v
+		}
+		if strings.HasPrefix(arg, "endpoint=") {
+			v := strings.TrimPrefix(arg, "endpoint=")
+			config.Endpoint = v
+		}
+	}
+
 	return TracingMiddleware(&config)
 }
 

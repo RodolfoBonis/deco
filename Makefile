@@ -1,4 +1,4 @@
-.PHONY: help build test lint clean install dev docs
+.PHONY: help build test lint clean install dev deps security bench release all check format test-infra-start test-infra-stop test-infra-restart test-infra-status
 
 # Variáveis
 BINARY_NAME=deco
@@ -31,8 +31,7 @@ lint: ## Executa linting
 
 lint-fix: ## Corrige problemas de linting automaticamente
 	@echo "🔧 Corrigindo problemas de linting..."
-	goimports -w .
-	gofmt -w .
+	golangci-lint run --fix --timeout=5m
 	@echo "✅ Linting corrigido"
 
 clean: ## Remove arquivos temporários
@@ -49,18 +48,12 @@ install: ## Instala o binário localmente
 
 dev: ## Inicia modo de desenvolvimento
 	@echo "🚀 Iniciando modo de desenvolvimento..."
-	./$(BINARY_NAME) dev
-
-docs: ## Gera documentação
-	@echo "📚 Gerando documentação..."
-	mkdir -p docs
-	go doc -all ./pkg/decorators > docs/api.md
-	@echo "✅ Documentação gerada em docs/"
-
-docs-readme: ## Gera README da documentação baseado no docs.yaml
-	@echo "📝 Gerando README da documentação..."
-	python .config/scripts/generate_docs_readme.py
-	@echo "✅ README da documentação gerado"
+	@if [ -f "$(BINARY_NAME)" ]; then \
+		./$(BINARY_NAME) dev; \
+	else \
+		echo "❌ Binário não encontrado. Execute 'make build' primeiro."; \
+		exit 1; \
+	fi
 
 deps: ## Atualiza dependências
 	@echo "📦 Atualizando dependências..."
@@ -82,4 +75,36 @@ release: build test lint security ## Prepara release (build + test + lint + secu
 	@echo "🎉 Release preparado com sucesso!"
 
 all: clean deps build test lint security ## Executa todo o pipeline
-	@echo "🎉 Pipeline completo executado com sucesso!" 
+	@echo "🎉 Pipeline completo executado com sucesso!"
+
+check: test lint security ## Executa verificações (test + lint + security)
+	@echo "✅ Todas as verificações passaram!"
+
+format: ## Formata o código
+	@echo "🎨 Formatando código..."
+	gofmt -w .
+	goimports -w .
+	@echo "✅ Código formatado"
+
+# Infraestrutura de Teste
+test-infra-start: ## Inicia infraestrutura de teste (Redis + OpenTelemetry)
+	@echo "🚀 Iniciando infraestrutura de teste..."
+	@./scripts/test-infra.sh start
+
+test-infra-stop: ## Para infraestrutura de teste
+	@echo "🛑 Parando infraestrutura de teste..."
+	@./scripts/test-infra.sh stop
+
+test-infra-restart: ## Reinicia infraestrutura de teste
+	@echo "🔄 Reiniciando infraestrutura de teste..."
+	@./scripts/test-infra.sh restart
+
+test-infra-status: ## Mostra status da infraestrutura de teste
+	@echo "📊 Status da infraestrutura de teste..."
+	@./scripts/test-infra.sh status
+
+test-with-infra: test-infra-start ## Executa testes com infraestrutura
+	@echo "🧪 Executando testes com infraestrutura..."
+	@make test
+	@echo "🛑 Parando infraestrutura de teste..."
+	@./scripts/test-infra.sh stop 

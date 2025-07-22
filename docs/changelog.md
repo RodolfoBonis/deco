@@ -1,5 +1,32 @@
 # Changelog
 
+## [Unreleased] - 2024-01-XX
+
+### 🆕 New Features
+- **🔒 Automatic Security Protection**: Internal endpoints (`/decorators/*`) are now automatically protected
+  - `deco.Default()` applies localhost-only protection
+  - `deco.DefaultWithSecurity()` for custom security configuration
+  - Support for network-based, IP-based, and hostname-based access control
+
+- **🛡️ @Security Decorator**: Network-based access control for application endpoints
+  - `@Security(private)` - Allow private networks
+  - `@Security(networks="192.168.1.0/24")` - Specific networks
+  - `@Security(ips="192.168.1.100")` - Specific IPs
+
+- **🔄 @Proxy Decorator**: Complete API Gateway functionality
+  - Service discovery (Consul, DNS, Kubernetes, Static)
+  - Load balancing (Round Robin, Least Connections, IP Hash, Weighted)
+  - Health checks and circuit breaker pattern
+
+### 🔧 Improvements
+- Enhanced documentation with comprehensive API reference
+- Improved error handling and logging
+- Better integration with existing middleware system
+
+### 🐛 Bug Fixes
+- Fixed proxy middleware integration in code generation
+- Improved security middleware performance
+
 ## Recent Changes
 
 c258ab4 feat(docs): implement automated documentation system with Go Gopher branding (#19)

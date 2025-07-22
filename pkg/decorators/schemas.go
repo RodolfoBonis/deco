@@ -7,32 +7,50 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 )
 
-// global schemas registry
-var schemas = make(map[string]*SchemaInfo)
+// global schemas registry with mutex protection
+var (
+	schemas      = make(map[string]*SchemaInfo)
+	schemasMutex sync.RWMutex
+)
 
 // RegisterSchema registers a new schema in the framework
 func RegisterSchema(schema *SchemaInfo) {
 	if schema.Name != "" {
+		schemasMutex.Lock()
 		schemas[schema.Name] = schema
+		schemasMutex.Unlock()
 		LogVerbose("Schema registered: %s", schema.Name)
 	}
 }
 
 // GetSchemas returns all registered schemas
 func GetSchemas() map[string]*SchemaInfo {
-	return schemas
+	schemasMutex.RLock()
+	defer schemasMutex.RUnlock()
+
+	// Return a copy to avoid race conditions
+	schemasCopy := make(map[string]*SchemaInfo)
+	for k, v := range schemas {
+		schemasCopy[k] = v
+	}
+	return schemasCopy
 }
 
 // GetSchema returns a specific schema by name
 func GetSchema(name string) *SchemaInfo {
+	schemasMutex.RLock()
+	defer schemasMutex.RUnlock()
 	return schemas[name]
 }
 
 // ClearSchemas clears all registered schemas (useful for testing)
 func ClearSchemas() {
+	schemasMutex.Lock()
 	schemas = make(map[string]*SchemaInfo)
+	schemasMutex.Unlock()
 }
 
 // parseEntityFromStruct extracts entity metadata from a struct declaration
@@ -42,7 +60,7 @@ func parseEntityFromStruct(_ *token.FileSet, fileName string, structDecl *ast.Ge
 	}
 
 	// Join all comments
-	var comments []string
+	comments := make([]string, 0, len(structDecl.Doc.List))
 	for _, comment := range structDecl.Doc.List {
 		comments = append(comments, comment.Text)
 	}

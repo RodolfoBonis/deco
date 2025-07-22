@@ -62,25 +62,27 @@ jobs:
       - name: Download dependencies
         run: go mod download
 
-      - name: Install Lint Dependencies
+      - name: Install golangci-lint
         run: |
           go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
-          go install honnef.co/go/tools/cmd/staticcheck@latest
-          go install golang.org/x/tools/cmd/goimports@latest
           export PATH=$PATH:$(go env GOPATH)/bin
 
       - name: Run lint
         id: lint
         run: |
-          if [ -f .config/scripts/lint.sh ]; then
-            chmod +x .config/scripts/lint.sh
-            export PATH=$PATH:$(go env GOPATH)/bin
-            set +e
-            ./.config/scripts/lint.sh > lint_output.txt 2>&1
-            echo "status=$?" >> $GITHUB_OUTPUT
-            set -e
+          export PATH=$PATH:$(go env GOPATH)/bin
+          set +e
+          golangci-lint run --timeout=5m > lint_output.txt 2>&1
+          LINT_EXIT_CODE=$?
+          echo "status=$LINT_EXIT_CODE" >> $GITHUB_OUTPUT
+          set -e
+          
+          # Se houve erros de lint, mostrar o output
+          if [ $LINT_EXIT_CODE -ne 0 ]; then
+            echo "❌ Lint errors found:"
+            cat lint_output.txt
           else
-            echo "status=0" >> $GITHUB_OUTPUT
+            echo "✅ No lint errors found"
           fi
 
       - name: Install Python dependencies for comment
@@ -391,3 +393,12 @@ jobs:
           echo "message<<EOF" >> $GITHUB_OUTPUT
           echo "$ESCAPED_MESSAGE" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT 
+
+      - name: Send Telegram notification on Feilure
+        uses: an3park/telegram-action@v1
+        if: ${{ needs.lint_go.result != 'success' || needs.test.result != 'success' || needs.check_vulnerabilities.result != 'success' || needs.build.result != 'success' }}
+        with:
+          chat_id: ${{ secrets.CHAT_ID }}
+          bot_token: ${{ secrets.BOTTOKEN }}
+          message_thread_id: ${{ secrets.THREAD_ID }}
+          message: ${{ steps.generate_error_message.outputs.message }}

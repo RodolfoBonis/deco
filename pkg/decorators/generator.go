@@ -15,18 +15,6 @@ import (
 
 // escapeGoString escapes a string for safe use in generated Go code
 func escapeGoString(s string) string {
-	// Handle empty strings
-	if s == "" {
-		return `""`
-	}
-
-	// Replace problematic characters that could break the template
-	s = strings.ReplaceAll(s, "\n", "\\n")
-	s = strings.ReplaceAll(s, "\r", "\\r")
-	s = strings.ReplaceAll(s, "\t", "\\t")
-	s = strings.ReplaceAll(s, `"`, `\"`)
-	s = strings.ReplaceAll(s, `\`, `\\`)
-
 	// Use strconv.Quote to properly escape the string
 	return strconv.Quote(s)
 }
@@ -38,33 +26,10 @@ func GenerateInitFile(rootDir, outputPath, pkgName string) error {
 
 // GenerateInitFileWithConfig generates file with specific configuration
 func GenerateInitFileWithConfig(rootDir, outputPath, pkgName string, config *Config) error {
-	// Parse source directory
-	routes, err := ParseDirectory(rootDir)
+	// Parse and prepare data
+	routes, genData, err := parseAndPrepareData(rootDir, pkgName)
 	if err != nil {
-		return fmt.Errorf("error in parsing do directory %s: %v", rootDir, err)
-	}
-
-	// Run hooks de parsing
-	if err := executeParserHooks(routes); err != nil {
-		return fmt.Errorf("error nos parser hooks: %v", err)
-	}
-
-	// Prepare data for generation
-	genData := &GenData{
-		PackageName: pkgName,
-		Routes:      routes,
-		Imports: []string{
-			`decorators "github.com/RodolfoBonis/deco/pkg/decorators"`,
-		},
-		Metadata: make(map[string]interface{}),
-	}
-
-	// Add generation timestamp
-	genData.Metadata["generated_at"] = time.Now().Format(time.RFC3339)
-
-	// Run generation hooks
-	if err := executeGeneratorHooks(genData); err != nil {
-		return fmt.Errorf("error nos generator hooks: %v", err)
+		return err
 	}
 
 	// Use default configuration if not provided
@@ -72,61 +37,12 @@ func GenerateInitFileWithConfig(rootDir, outputPath, pkgName string, config *Con
 		config = DefaultConfig()
 	}
 
-	// Choose template based on minification configuration
-	var tmplContent string
-	if config.Prod.Minify {
-		tmplContent = GetMinifiedTemplate()
-	} else {
-		tmplContent = getInitTemplate()
+	// Generate the file
+	if err := generateFile(outputPath, genData, config); err != nil {
+		return err
 	}
 
-	// Create template with string escaping function
-	tmpl, err := template.New("init_decorators").Funcs(template.FuncMap{
-		"escapeString": escapeGoString,
-	}).Parse(tmplContent)
-	if err != nil {
-		return fmt.Errorf("error processing template: %v", err)
-	}
-
-	// Create output directory if necessary
-	outputDir := filepath.Dir(outputPath)
-	if err := os.MkdirAll(outputDir, 0o755); err != nil {
-		return fmt.Errorf("error creating output directory: %v", err)
-	}
-
-	// If using .deco folder, create .gitignore for it
-	if strings.Contains(outputDir, ".deco") {
-		gitignorePath := filepath.Join(outputDir, ".gitignore")
-		if _, err := os.Stat(gitignorePath); os.IsNotExist(err) {
-			gitignoreContent := `# Files generateds automatically pelo gin-decorators
-*.go
-!.gitignore
-
-# Files de cache e temporários
-*.tmp
-*.cache
-`
-			if err := os.WriteFile(gitignorePath, []byte(gitignoreContent), 0o600); err != nil {
-				fmt.Printf("⚠️  Warning: could not criar .gitignore em %s: %v\n", outputDir, err)
-			} else {
-				fmt.Printf("📝 Created .gitignore em %s\n", outputDir)
-			}
-		}
-	}
-
-	// Create output file
-	outputFile, err := os.Create(outputPath)
-	if err != nil {
-		return fmt.Errorf("error creating file %s: %v", outputPath, err)
-	}
-	defer outputFile.Close()
-
-	// Run template
-	if err := tmpl.Execute(outputFile, genData); err != nil {
-		return fmt.Errorf("error executing template: %v", err)
-	}
-
-	// Validation if enabled
+	// Validate if enabled
 	if config.Prod.Validate {
 		if err := ValidateGeneration(outputPath); err != nil {
 			return fmt.Errorf("validation failed: %v", err)
@@ -134,30 +50,132 @@ func GenerateInitFileWithConfig(rootDir, outputPath, pkgName string, config *Con
 		LogVerbose("File validado com success")
 	}
 
-	// Count statistics
-	wsHandlerCount := 0
-	middlewareCount := 0
-	for _, route := range routes {
-		wsHandlerCount += len(route.WebSocketHandlers)
-		for _, marker := range route.Markers {
-			if marker.Name != "Route" && marker.Name != "Summary" && marker.Name != "Description" &&
-				marker.Name != "Tag" && marker.Name != "Response" && marker.Name != "RequestBody" &&
-				marker.Name != "Schema" && marker.Name != "Group" && marker.Name != "Param" {
-				middlewareCount++
-			}
-		}
+	// Log statistics
+	logGenerationStats(routes, genData, outputPath, config)
+
+	return nil
+}
+
+// parseAndPrepareData parses the directory and prepares generation data
+func parseAndPrepareData(rootDir, pkgName string) ([]*RouteMeta, *GenData, error) {
+	routes, err := ParseDirectory(rootDir)
+	if err != nil {
+		return nil, nil, fmt.Errorf("error in parsing do directory %s: %v", rootDir, err)
 	}
 
-	// Essential logs only
-	LogNormal("Code generated: %d routes, %d websockets, %d middlewares processed", len(routes), wsHandlerCount, middlewareCount)
+	if err := executeParserHooks(routes); err != nil {
+		return nil, nil, fmt.Errorf("error nos parser hooks: %v", err)
+	}
 
-	// Detailed logs only in verbose mode
+	genData := &GenData{
+		PackageName: pkgName,
+		Routes:      routes,
+		Imports: []string{
+			`decorators "github.com/RodolfoBonis/deco/pkg/decorators"`,
+		},
+		Metadata: map[string]interface{}{
+			"generated_at": time.Now().Format(time.RFC3339),
+		},
+	}
+
+	if err := executeGeneratorHooks(genData); err != nil {
+		return nil, nil, fmt.Errorf("error nos generator hooks: %v", err)
+	}
+
+	return routes, genData, nil
+}
+
+// generateFile generates the output file
+func generateFile(outputPath string, genData *GenData, config *Config) error {
+	tmplContent := getTemplateContent(config)
+
+	tmpl, err := template.New("init_decorators").Funcs(template.FuncMap{
+		"escapeString": escapeGoString,
+	}).Parse(tmplContent)
+	if err != nil {
+		return fmt.Errorf("error processing template: %v", err)
+	}
+
+	if err := createOutputDirectory(outputPath); err != nil {
+		return err
+	}
+
+	if err := createGitignoreIfNeeded(outputPath); err != nil {
+		return err
+	}
+
+	outputFile, err := os.Create(outputPath)
+	if err != nil {
+		return fmt.Errorf("error creating file %s: %v", outputPath, err)
+	}
+	defer outputFile.Close()
+
+	if err := tmpl.Execute(outputFile, genData); err != nil {
+		return fmt.Errorf("error executing template: %v", err)
+	}
+
+	return nil
+}
+
+// getTemplateContent returns the appropriate template content
+func getTemplateContent(config *Config) string {
+	if config.Prod.Minify {
+		return GetMinifiedTemplate()
+	}
+	return getInitTemplate()
+}
+
+// createOutputDirectory creates the output directory if necessary
+func createOutputDirectory(outputPath string) error {
+	outputDir := filepath.Dir(outputPath)
+	if err := os.MkdirAll(outputDir, 0o755); err != nil {
+		return fmt.Errorf("error creating output directory: %v", err)
+	}
+	return nil
+}
+
+// createGitignoreIfNeeded creates .gitignore for .deco folders
+func createGitignoreIfNeeded(outputPath string) error {
+	outputDir := filepath.Dir(outputPath)
+	if !strings.Contains(outputDir, ".deco") {
+		return nil
+	}
+
+	gitignorePath := filepath.Join(outputDir, ".gitignore")
+	if _, err := os.Stat(gitignorePath); err == nil {
+		return nil // Already exists
+	}
+
+	gitignoreContent := `# Files generateds automatically pelo gin-decorators
+*.go
+!.gitignore
+
+# Files de cache e temporários
+*.tmp
+*.cache
+`
+	if err := os.WriteFile(gitignorePath, []byte(gitignoreContent), 0o600); err != nil {
+		fmt.Printf("⚠️  Warning: could not criar .gitignore em %s: %v\n", outputDir, err)
+	} else {
+		fmt.Printf("📝 Created .gitignore em %s\n", outputDir)
+	}
+	return nil
+}
+
+// logGenerationStats logs generation statistics
+func logGenerationStats(routes []*RouteMeta, genData *GenData, outputPath string, config *Config) {
+	stats := calculateStats(routes)
+
+	LogNormal("Code generated: %d routes, %d websockets, %d middlewares, %d proxies processed",
+		len(routes), stats.wsHandlerCount, stats.middlewareCount, stats.proxyCount)
+
 	LogVerbose("✅ File generated successfully: %s", outputPath)
 	LogVerbose("🚀 Works in DEV and PROD automatically!")
 	LogVerbose("📊 Statistics:")
 	LogVerbose("   - %d routes processed", len(routes))
 	LogVerbose("   - %d imports added", len(genData.Imports))
-	LogVerbose("   - Package: %s", pkgName)
+	LogVerbose("   - Package: %s", genData.PackageName)
+
 	if config.Prod.Minify {
 		LogVerbose("📦 Code minified for production")
 	}
@@ -167,8 +185,32 @@ func GenerateInitFileWithConfig(rootDir, outputPath, pkgName string, config *Con
 	if strings.Contains(outputPath, ".deco") {
 		LogVerbose("📁 Files organizados na pasta .deco")
 	}
+}
 
-	return nil
+// generationStats holds statistics about the generation
+type generationStats struct {
+	wsHandlerCount  int
+	middlewareCount int
+	proxyCount      int
+}
+
+// calculateStats calculates generation statistics
+func calculateStats(routes []*RouteMeta) generationStats {
+	var stats generationStats
+
+	for _, route := range routes {
+		stats.wsHandlerCount += len(route.WebSocketHandlers)
+		for _, middleware := range route.MiddlewareCalls {
+			if strings.Contains(middleware, "Proxy") {
+				stats.proxyCount++
+				LogVerbose("🔍 Found Proxy middleware in route: %s", route.FuncName)
+			}
+			// Count all middleware calls
+			stats.middlewareCount++
+		}
+	}
+
+	return stats
 }
 
 // getInitTemplate returns the default template for code generation
@@ -444,49 +486,63 @@ func validateStructure(filePath string) error {
 		return err
 	}
 
-	var hasInitFunc bool
-	var hasImports bool
-	var hasRegistrations bool
-
-	// Verify imports
-	if len(file.Imports) > 0 {
-		hasImports = true
-	}
-
-	// Verify declarations
-	for _, decl := range file.Decls {
-		// Verify init function
-		if fnDecl, ok := decl.(*ast.FuncDecl); ok {
-			if fnDecl.Name.Name == "init" {
-				hasInitFunc = true
-
-				// Check if there are route registrations
-				ast.Inspect(fnDecl, func(n ast.Node) bool {
-					if callExpr, ok := n.(*ast.CallExpr); ok {
-						if selExpr, ok := callExpr.Fun.(*ast.SelectorExpr); ok {
-							if selExpr.Sel.Name == "RegisterRouteWithMeta" {
-								hasRegistrations = true
-							}
-						}
-					}
-					return true
-				})
-			}
-		}
-	}
+	structure := validateFileStructure(file)
 
 	// Validate minimum expected structure
-	if !hasImports {
+	if !structure.hasImports {
 		return fmt.Errorf("necessary imports not founds")
 	}
 
-	if !hasInitFunc {
+	if !structure.hasInitFunc {
 		return fmt.Errorf("init() function not found")
 	}
 
-	if !hasRegistrations {
+	// Allow files without route registrations if they have WebSocket handlers
+	if !structure.hasRegistrations && !structure.hasWebSocketHandlers {
 		return fmt.Errorf("route registrations not founds na init() function")
 	}
 
 	return nil
+}
+
+type fileStructure struct {
+	hasImports           bool
+	hasInitFunc          bool
+	hasRegistrations     bool
+	hasWebSocketHandlers bool
+}
+
+func validateFileStructure(file *ast.File) fileStructure {
+	structure := fileStructure{
+		hasImports: len(file.Imports) > 0,
+	}
+
+	// Verify declarations
+	for _, decl := range file.Decls {
+		if fnDecl, ok := decl.(*ast.FuncDecl); ok {
+			if fnDecl.Name.Name == "init" {
+				structure.hasInitFunc = true
+				structure = validateInitFunction(fnDecl, structure)
+			}
+		}
+	}
+
+	return structure
+}
+
+func validateInitFunction(fnDecl *ast.FuncDecl, structure fileStructure) fileStructure {
+	ast.Inspect(fnDecl, func(n ast.Node) bool {
+		if callExpr, ok := n.(*ast.CallExpr); ok {
+			if selExpr, ok := callExpr.Fun.(*ast.SelectorExpr); ok {
+				switch selExpr.Sel.Name {
+				case "RegisterRouteWithMeta":
+					structure.hasRegistrations = true
+				case "RegisterDefaultWebSocketHandlers":
+					structure.hasWebSocketHandlers = true
+				}
+			}
+		}
+		return true
+	})
+	return structure
 }

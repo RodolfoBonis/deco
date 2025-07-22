@@ -31,10 +31,8 @@ func ParseDirectory(rootDir string) ([]*RouteMeta, error) {
 
 	// Process each package
 	for pkgName, pkg := range pkgs {
-
 		// Process each file in package
 		for fileName, file := range pkg.Files {
-
 			fileRoutes, errs := parseFileWithValidation(fset, fileName, file, pkgName)
 
 			routes = append(routes, fileRoutes...)
@@ -98,7 +96,7 @@ func parseFunctionWithValidation(fset *token.FileSet, fileName string, funcDecl 
 	}
 
 	// Join all comments
-	var comments []string
+	comments := make([]string, 0, len(funcDecl.Doc.List))
 	for _, comment := range funcDecl.Doc.List {
 		comments = append(comments, comment.Text)
 	}
@@ -370,7 +368,7 @@ type MultipleValidationError struct {
 }
 
 func (e *MultipleValidationError) Error() string {
-	var messages []string
+	messages := make([]string, 0, len(e.Errors))
 	for _, err := range e.Errors {
 		messages = append(messages, err.Error())
 	}
@@ -401,104 +399,12 @@ func processMiddlewares(route *RouteMeta) error {
 	var middlewareInfo []MiddlewareInfo
 	var parameters []ParameterInfo
 	var tags []string
-	var responses []ResponseInfo // Changed to []ResponseInfo
+	var responses []ResponseInfo
 	var groupInfo *GroupInfo
 
 	// Process each marker
 	for _, marker := range route.Markers {
-		switch marker.Name {
-		case "Auth", "Cache", "RateLimit", "Metrics", "CORS", "WebSocketStats":
-			// Traditional middlewares
-			call := generateMiddlewareCall(marker)
-			if call != "" {
-				middlewareCalls = append(middlewareCalls, call)
-
-				// Add middleware information
-				info := MiddlewareInfo{
-					Name:        marker.Name,
-					Args:        parseArgsToMap(marker.Args),
-					Description: getMiddlewareDescription(marker.Name),
-				}
-				middlewareInfo = append(middlewareInfo, info)
-			}
-
-		case "WebSocket":
-			// WebSocket can be both middleware and handler registration
-			call := generateMiddlewareCall(marker)
-			if call != "" {
-				middlewareCalls = append(middlewareCalls, call)
-
-				// Add middleware information
-				info := MiddlewareInfo{
-					Name:        marker.Name,
-					Args:        parseArgsToMap(marker.Args),
-					Description: getMiddlewareDescription(marker.Name),
-				}
-				middlewareInfo = append(middlewareInfo, info)
-			}
-
-			// If has args, register as WebSocket handler
-			if len(marker.Args) > 0 {
-				for _, arg := range marker.Args {
-					messageType := strings.Trim(arg, `"' `)
-					if messageType != "" {
-						route.WebSocketHandlers = append(route.WebSocketHandlers, messageType)
-					}
-				}
-			}
-
-		case "Group":
-			// Process grupo
-			if len(marker.Args) > 0 {
-				groupName := strings.Trim(marker.Args[0], `"`)
-				groupInfo = GetGroup(groupName)
-				if groupInfo == nil {
-					// Create group if it does not exist
-					prefix := "/" + strings.ToLower(groupName)
-					description := fmt.Sprintf("Grupo %s", groupName)
-					if len(marker.Args) > 1 {
-						prefix = strings.Trim(marker.Args[1], `"`)
-					}
-					if len(marker.Args) > 2 {
-						description = strings.Trim(marker.Args[2], `"`)
-					}
-					groupInfo = RegisterGroup(groupName, prefix, description)
-				}
-			}
-
-		case "Param":
-			// Process parameter: @Param(name="id", type="string", location="path", required=true, description="User ID")
-			param := parseParameterInfo(marker.Args)
-			if param.Name != "" {
-				parameters = append(parameters, param)
-			}
-
-		case "Tag":
-			// Add tag
-			if len(marker.Args) > 0 {
-				tag := strings.Trim(marker.Args[0], `"`)
-				tags = append(tags, tag)
-			}
-
-		case "Response":
-			// Process response: @Response(code="200", description="Success", type="UserResponse")
-			response := parseResponseInfo(marker.Args)
-			if response.Code != "" && response.Description != "" {
-				responses = append(responses, response)
-			}
-
-		case "Description":
-			// Description will be processed at route level
-			if len(marker.Args) > 0 {
-				route.Description = strings.Trim(marker.Args[0], `"`)
-			}
-
-		case "Summary":
-			// Summary will be processed at route level
-			if len(marker.Args) > 0 {
-				route.Summary = strings.Trim(marker.Args[0], `"`)
-			}
-		}
+		processMarker(marker, route, &middlewareCalls, &middlewareInfo, &parameters, &tags, &responses, &groupInfo)
 	}
 
 	route.MiddlewareCalls = middlewareCalls
@@ -509,6 +415,131 @@ func processMiddlewares(route *RouteMeta) error {
 	route.Group = groupInfo
 
 	return nil
+}
+
+// processMarker processes a single marker to reduce complexity
+func processMarker(marker MarkerInstance, route *RouteMeta, middlewareCalls *[]string, middlewareInfo *[]MiddlewareInfo, parameters *[]ParameterInfo, tags *[]string, responses *[]ResponseInfo, groupInfo **GroupInfo) {
+	switch marker.Name {
+	case "Auth", "Cache", "RateLimit", "Metrics", "CORS", "WebSocketStats", "Proxy", "Security":
+		processTraditionalMiddleware(marker, middlewareCalls, middlewareInfo)
+	case "WebSocket":
+		processWebSocketMarker(marker, route, middlewareCalls, middlewareInfo)
+	case "Group":
+		*groupInfo = processGroupMarker(marker)
+	case "Param":
+		processParamMarker(marker, parameters)
+	case "Tag":
+		processTagMarker(marker, tags)
+	case "Response":
+		processResponseMarker(marker, responses)
+	case "Description":
+		processDescriptionMarker(marker, route)
+	case "Summary":
+		processSummaryMarker(marker, route)
+	}
+}
+
+// processTraditionalMiddleware processes traditional middleware markers
+func processTraditionalMiddleware(marker MarkerInstance, middlewareCalls *[]string, middlewareInfo *[]MiddlewareInfo) {
+	call := generateMiddlewareCall(marker)
+	if call != "" {
+		*middlewareCalls = append(*middlewareCalls, call)
+		info := MiddlewareInfo{
+			Name:        marker.Name,
+			Args:        parseArgsToMap(marker.Args),
+			Description: getMiddlewareDescription(marker.Name),
+		}
+		*middlewareInfo = append(*middlewareInfo, info)
+	}
+}
+
+// processWebSocketMarker processes WebSocket marker
+func processWebSocketMarker(marker MarkerInstance, route *RouteMeta, middlewareCalls *[]string, middlewareInfo *[]MiddlewareInfo) {
+	// WebSocket can be both middleware and handler registration
+	call := generateMiddlewareCall(marker)
+	if call != "" {
+		*middlewareCalls = append(*middlewareCalls, call)
+		info := MiddlewareInfo{
+			Name:        marker.Name,
+			Args:        parseArgsToMap(marker.Args),
+			Description: getMiddlewareDescription(marker.Name),
+		}
+		*middlewareInfo = append(*middlewareInfo, info)
+	}
+
+	// If has args, register as WebSocket handler
+	if len(marker.Args) > 0 {
+		for _, arg := range marker.Args {
+			messageType := strings.Trim(arg, `"' `)
+			if messageType != "" {
+				route.WebSocketHandlers = append(route.WebSocketHandlers, messageType)
+			}
+		}
+	}
+}
+
+// processGroupMarker processes group marker
+func processGroupMarker(marker MarkerInstance) *GroupInfo {
+	if len(marker.Args) == 0 {
+		return nil
+	}
+
+	groupName := strings.Trim(marker.Args[0], `"`)
+	groupInfo := GetGroup(groupName)
+	if groupInfo != nil {
+		return groupInfo
+	}
+
+	// Create group if it does not exist
+	prefix := "/" + strings.ToLower(groupName)
+	description := fmt.Sprintf("Grupo %s", groupName)
+
+	if len(marker.Args) > 1 {
+		prefix = strings.Trim(marker.Args[1], `"`)
+	}
+	if len(marker.Args) > 2 {
+		description = strings.Trim(marker.Args[2], `"`)
+	}
+
+	return RegisterGroup(groupName, prefix, description)
+}
+
+// processParamMarker processes parameter marker
+func processParamMarker(marker MarkerInstance, parameters *[]ParameterInfo) {
+	param := parseParameterInfo(marker.Args)
+	if param.Name != "" {
+		*parameters = append(*parameters, param)
+	}
+}
+
+// processTagMarker processes tag marker
+func processTagMarker(marker MarkerInstance, tags *[]string) {
+	if len(marker.Args) > 0 {
+		tag := strings.Trim(marker.Args[0], `"`)
+		*tags = append(*tags, tag)
+	}
+}
+
+// processResponseMarker processes response marker
+func processResponseMarker(marker MarkerInstance, responses *[]ResponseInfo) {
+	response := parseResponseInfo(marker.Args)
+	if response.Code != "" && response.Description != "" {
+		*responses = append(*responses, response)
+	}
+}
+
+// processDescriptionMarker processes description marker
+func processDescriptionMarker(marker MarkerInstance, route *RouteMeta) {
+	if len(marker.Args) > 0 {
+		route.Description = strings.Trim(marker.Args[0], `"`)
+	}
+}
+
+// processSummaryMarker processes summary marker
+func processSummaryMarker(marker MarkerInstance, route *RouteMeta) {
+	if len(marker.Args) > 0 {
+		route.Summary = strings.Trim(marker.Args[0], `"`)
+	}
 }
 
 // parseArgsToMap converts arguments to map[string]interface{}
@@ -596,6 +627,7 @@ func getMiddlewareDescription(name string) string {
 		"CORS":           "Middleware de Cross-Origin Resource Sharing",
 		"WebSocket":      "Middleware de upgrade para conexão WebSocket",
 		"WebSocketStats": "Middleware de estatísticas WebSocket",
+		"Proxy":          "Middleware de proxy reverso com service discovery e load balancing",
 	}
 
 	if desc, exists := descriptions[name]; exists {
@@ -648,6 +680,18 @@ func generateMiddlewareCall(marker MarkerInstance) string {
 			return fmt.Sprintf(`deco.CreateWebSocketStatsMiddleware(%q)`, strings.Join(marker.Args, ","))
 		}
 		return `deco.CreateWebSocketStatsMiddleware("")`
+
+	case "Proxy":
+		if len(marker.Args) > 0 {
+			return fmt.Sprintf(`deco.CreateProxyMiddleware(%q)`, strings.Join(marker.Args, ","))
+		}
+		return `deco.CreateProxyMiddleware("")`
+
+	case "Security":
+		if len(marker.Args) > 0 {
+			return fmt.Sprintf(`deco.CreateSecurityMiddleware(%q)`, strings.Join(marker.Args, ","))
+		}
+		return `deco.CreateSecurityMiddleware("")`
 	}
 
 	return ""
@@ -699,5 +743,19 @@ func CreateWebSocketMiddleware(args string) gin.HandlerFunc {
 func CreateWebSocketStatsMiddleware(args string) gin.HandlerFunc {
 	argsSlice := parseArguments(args)
 	config := GetMarkers()["WebSocketStats"]
+	return config.Factory(argsSlice)
+}
+
+// CreateProxyMiddleware creates proxy middleware (wrapper for generation)
+func CreateProxyMiddleware(args string) gin.HandlerFunc {
+	argsSlice := parseArguments(args)
+	config := GetMarkers()["Proxy"]
+	return config.Factory(argsSlice)
+}
+
+// CreateSecurityMiddleware creates security middleware (wrapper for generation)
+func CreateSecurityMiddleware(args string) gin.HandlerFunc {
+	argsSlice := parseArguments(args)
+	config := GetMarkers()["Security"]
 	return config.Factory(argsSlice)
 }

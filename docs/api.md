@@ -108,14 +108,41 @@ func CreateWebSocketStatsMiddleware(args string) gin.HandlerFunc
     CreateWebSocketStatsMiddleware creates WebSocket stats middleware (wrapper
     for generation)
 
+func CreateSecurityMiddleware(args string) gin.HandlerFunc
+    CreateSecurityMiddleware creates security middleware (wrapper for generation)
+
+func CreateProxyMiddleware(args string) gin.HandlerFunc
+    CreateProxyMiddleware creates proxy middleware (wrapper for generation)
+
 func CustomCache(ttl time.Duration, keyGen CacheKeyFunc, cacheType string) gin.HandlerFunc
     CustomCache customizable cache middleware
 
 func CustomRateLimit(limit int, _ time.Duration, keyGen KeyGeneratorFunc, rateLimiterType string) gin.HandlerFunc
     CustomRateLimit customizable rate limiting middleware
 
+func DefaultSecurityConfig() *SecurityConfig
+    DefaultSecurityConfig returns a secure default configuration for internal endpoints
+
+func SecureInternalEndpoints(config *SecurityConfig) gin.HandlerFunc
+    SecureInternalEndpoints creates a middleware to secure internal gin-decorators endpoints
+
+func AllowLocalhostOnly() gin.HandlerFunc
+    AllowLocalhostOnly creates a middleware that only allows localhost access
+
+func AllowPrivateNetworks() gin.HandlerFunc
+    AllowPrivateNetworks creates a middleware that allows private network access
+
+func AllowSpecificNetworks(networks []string) gin.HandlerFunc
+    AllowSpecificNetworks creates a middleware that allows specific networks
+
+func AllowSpecificIPs(ips []string) gin.HandlerFunc
+    AllowSpecificIPs creates a middleware that allows specific IP addresses
+
 func Default() *gin.Engine
-    Default creates a gin.Engine with all registered routes
+    Default creates a gin.Engine with all registered routes and automatic security protection for internal endpoints
+
+func DefaultWithSecurity(securityConfig *SecurityConfig) *gin.Engine
+    DefaultWithSecurity creates a gin.Engine with custom security configuration for internal endpoints
 
 func DocsHandler(c *gin.Context)
     DocsHandler serves the HTML documentation page
@@ -1359,4 +1386,53 @@ type XML struct {
 	Wrapped   bool   `json:"wrapped,omitempty"`
 }
     XML metadata
+
+type SecurityConfig struct {
+	AllowedNetworks     []string `yaml:"allowed_networks"`     // Networks in CIDR notation
+	AllowedIPs          []string `yaml:"allowed_ips"`          // Individual IP addresses
+	AllowedHosts        []string `yaml:"allowed_hosts"`        // Hostnames/domains
+	AllowLocalhost      bool     `yaml:"allow_localhost"`      // Allow localhost/127.0.0.1
+	AllowPrivateNetworks bool    `yaml:"allow_private_networks"` // Allow private networks
+	ErrorMessage        string   `yaml:"error_message"`        // Custom error message
+	LogBlockedAttempts  bool     `yaml:"log_blocked_attempts"` // Log blocked attempts
+}
+    SecurityConfig holds security configuration for internal endpoints
+
+type ProxyConfig struct {
+	ServiceName       string        `yaml:"service_name"`       // Target service name
+	TargetURL         string        `yaml:"target_url"`         // Target URL for static discovery
+	DiscoveryType     string        `yaml:"discovery_type"`     // "static", "consul", "dns", "k8s"
+	LoadBalancerType  string        `yaml:"load_balancer_type"` // "round_robin", "least_connections", "ip_hash", "weighted"
+	Timeout           string        `yaml:"timeout"`            // Request timeout
+	Retries           int           `yaml:"retries"`            // Number of retries
+	RetryDelay        string        `yaml:"retry_delay"`        // Delay between retries
+	HealthInterval    string        `yaml:"health_interval"`    // Health check interval
+	FailureThreshold  int           `yaml:"failure_threshold"`  // Circuit breaker threshold
+	CircuitBreaker    string        `yaml:"circuit_breaker"`    // Circuit breaker timeout
+	ConsulAddress     string        `yaml:"consul_address"`     // Consul service discovery address
+	ConsulToken       string        `yaml:"consul_token"`       // Consul authentication token
+	DNSZone           string        `yaml:"dns_zone"`           // DNS zone for service discovery
+	K8sNamespace      string        `yaml:"k8s_namespace"`      // Kubernetes namespace
+	K8sService        string        `yaml:"k8s_service"`        // Kubernetes service name
+	Instances         []string      `yaml:"instances"`          // Static instances list
+	Weights           []int         `yaml:"weights"`            // Weights for weighted load balancing
+}
+    ProxyConfig configuration for API Gateway proxy functionality
+
+type ProxyInstance struct {
+	ID       string
+	URL      string
+	Weight   int
+	Healthy  bool
+	LastSeen time.Time
+}
+    ProxyInstance represents a proxy target instance
+
+type ProxyManager struct {
+	// Has unexported fields.
+}
+    ProxyManager manages proxy instances and routing
+
+func NewProxyManager(config ProxyConfig) *ProxyManager
+    NewProxyManager creates a new proxy manager with the given configuration
 

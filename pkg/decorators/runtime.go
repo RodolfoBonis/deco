@@ -98,11 +98,13 @@ func isCliCommand() bool {
 	}
 
 	// Check arguments that indicate CLI command
-	for _, arg := range os.Args[1:] {
-		if arg == "init" || arg == "-init" || arg == "--init" ||
-			arg == "version" || arg == "-version" || arg == "--version" ||
-			arg == "help" || arg == "-help" || arg == "--help" {
-			return true
+	if len(os.Args) > 1 {
+		for _, arg := range os.Args[1:] {
+			if arg == "init" || arg == "-init" || arg == "--init" ||
+				arg == "version" || arg == "-version" || arg == "--version" ||
+				arg == "help" || arg == "-help" || arg == "--help" {
+				return true
+			}
 		}
 	}
 
