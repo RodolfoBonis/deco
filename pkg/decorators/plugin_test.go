@@ -203,14 +203,19 @@ func TestShouldAddHandlersImport(t *testing.T) {
 
 func TestBuildHandlersImport(t *testing.T) {
 	// Test building handlers import
-	importPath := buildHandlersImport()
+	data := &GenData{
+		Routes: []*RouteMeta{
+			{PackageName: "handlers", Method: "GET", Path: "/test", FuncName: "TestHandler"},
+		},
+	}
+	importPath := buildHandlersImport(data)
 	assert.Contains(t, importPath, "handlers")
 }
 
 func TestBuildImportPath(t *testing.T) {
 	// Test building import path
-	path := buildImportPath("test", "handler")
-	assert.Contains(t, path, "handler")
+	path := buildImportPath("test", "handler", "handlers")
+	assert.Contains(t, path, "handlers")
 }
 
 func TestAddMissingImports(t *testing.T) {

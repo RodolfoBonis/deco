@@ -221,7 +221,7 @@ import ("github.com/gin-gonic/gin"
 )
 func init() {
 {{- range .Routes }}
-deco.RegisterRouteWithMeta(deco.RouteEntry{Method:"{{ .Method }}",Path:"{{ .Path }}",Handler:{{ if eq $.PackageName "deco" }}handlers.{{ .FuncName }}{{ else }}{{ .FuncName }}{{ end }},
+deco.RegisterRouteWithMeta(deco.RouteEntry{Method:"{{ .Method }}",Path:"{{ .Path }}",Handler:{{ if eq $.PackageName "deco" }}{{ .PackageName }}.{{ .FuncName }}{{ else }}{{ .FuncName }}{{ end }},
 {{- if .MiddlewareCalls }}
 Middlewares:[]gin.HandlerFunc{
 {{- range .MiddlewareCalls }}

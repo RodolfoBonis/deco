@@ -138,7 +138,7 @@ func getRequiredImports(data *GenData) []string {
 	}
 
 	if shouldAddHandlersImport(data) {
-		if handlerImport := buildHandlersImport(); handlerImport != "" {
+		if handlerImport := buildHandlersImport(data); handlerImport != "" {
 			requiredImports = append(requiredImports, handlerImport)
 		}
 	}
@@ -148,11 +148,11 @@ func getRequiredImports(data *GenData) []string {
 
 // shouldAddHandlersImport checks if handlers import should be added
 func shouldAddHandlersImport(data *GenData) bool {
-	return data.PackageName == "deco" && len(data.Routes) > 0 && data.Routes[0].PackageName == "handlers"
+	return data.PackageName == "deco" && len(data.Routes) > 0
 }
 
 // buildHandlersImport builds the handlers import path
-func buildHandlersImport() string {
+func buildHandlersImport(data *GenData) string {
 	wd, err := os.Getwd()
 	if err != nil {
 		return ""
@@ -163,26 +163,32 @@ func buildHandlersImport() string {
 		return ""
 	}
 
-	return buildImportPath(wd, modName)
+	// Use the actual package name from the first route
+	if len(data.Routes) > 0 {
+		actualPackageName := data.Routes[0].PackageName
+		return buildImportPath(wd, modName, actualPackageName)
+	}
+
+	return ""
 }
 
 // buildImportPath builds the import path based on working directory and module name
-func buildImportPath(wd, modName string) string {
+func buildImportPath(wd, modName, packageName string) string {
 	if !strings.Contains(wd, modName) {
-		return fmt.Sprintf(`handlers "%s/handlers"`, modName)
+		return fmt.Sprintf(`%s "%s/%s"`, packageName, modName, packageName)
 	}
 
 	parts := strings.Split(wd, modName)
 	if len(parts) <= 1 {
-		return fmt.Sprintf(`handlers "%s/handlers"`, modName)
+		return fmt.Sprintf(`%s "%s/%s"`, packageName, modName, packageName)
 	}
 
 	relativePath := strings.TrimPrefix(parts[1], "/")
 	if relativePath == "" {
-		return fmt.Sprintf(`handlers "%s/handlers"`, modName)
+		return fmt.Sprintf(`%s "%s/%s"`, packageName, modName, packageName)
 	}
 
-	return fmt.Sprintf(`handlers "%s/%s/handlers"`, modName, relativePath)
+	return fmt.Sprintf(`%s "%s/%s/%s"`, packageName, modName, relativePath, packageName)
 }
 
 // addMissingImports adds missing imports to the data
