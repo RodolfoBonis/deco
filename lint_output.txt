@@ -1,0 +1,12 @@
+pkg/decorators/generator.go:217:6: func `isMiddlewareMarker` is unused (unused)
+func isMiddlewareMarker(markerName string) bool {
+     ^
+pkg/decorators/health_checker_test.go:14:42: unnecessary leading newline (whitespace)
+func TestNewHealthChecker(t *testing.T) {
+                                         ^
+pkg/decorators/health_checker_test.go:35:69: unnecessary leading newline (whitespace)
+func TestHealthChecker_Check_NoHealthCheckConfigured(t *testing.T) {
+                                                                    ^
+pkg/decorators/health_checker_test.go:51:61: unnecessary leading newline (whitespace)
+func TestHealthChecker_Check_HealthyInstance(t *testing.T) {
+                                                            ^
