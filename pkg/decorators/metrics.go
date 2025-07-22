@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -43,10 +44,22 @@ type MetricsCollector struct {
 }
 
 // DefaultMetricsCollector global instance default
-var defaultMetricsCollector *MetricsCollector
+var (
+	defaultMetricsCollector *MetricsCollector
+	metricsInitMutex        sync.RWMutex
+	metricsInitialized      bool
+)
 
 // InitMetrics initializes metrics system
 func InitMetrics(config *MetricsConfig) *MetricsCollector {
+	metricsInitMutex.Lock()
+	defer metricsInitMutex.Unlock()
+
+	// Check if already initialized
+	if metricsInitialized && defaultMetricsCollector != nil {
+		return defaultMetricsCollector
+	}
+
 	collector := &MetricsCollector{
 		// HTTP metrics
 		httpRequestsTotal: prometheus.NewCounterVec(
@@ -218,25 +231,42 @@ func InitMetrics(config *MetricsConfig) *MetricsCollector {
 		),
 	}
 
-	// Register metrics
-	prometheus.MustRegister(
-		collector.httpRequestsTotal,
-		collector.httpRequestDuration,
-		collector.httpRequestSize,
-		collector.httpResponseSize,
-		collector.httpActiveRequests,
-		collector.middlewareExecutionTime,
-		collector.middlewareErrors,
-		collector.cacheHits,
-		collector.cacheMisses,
-		collector.cacheSize,
-		collector.rateLimitHits,
-		collector.rateLimitExceeded,
-		collector.validationErrors,
-		collector.validationTime,
-		collector.gorutines,
-		collector.memoryAllocated,
-	)
+	// Register metrics only if not already registered
+	if !metricsInitialized {
+		// Use Register instead of MustRegister to avoid panic on duplicate registration
+		metrics := []prometheus.Collector{
+			collector.httpRequestsTotal,
+			collector.httpRequestDuration,
+			collector.httpRequestSize,
+			collector.httpResponseSize,
+			collector.httpActiveRequests,
+			collector.middlewareExecutionTime,
+			collector.middlewareErrors,
+			collector.cacheHits,
+			collector.cacheMisses,
+			collector.cacheSize,
+			collector.rateLimitHits,
+			collector.rateLimitExceeded,
+			collector.validationErrors,
+			collector.validationTime,
+			collector.gorutines,
+			collector.memoryAllocated,
+		}
+
+		for _, metric := range metrics {
+			if err := prometheus.Register(metric); err != nil {
+				// If metric is already registered, unregister and register again
+				if are, ok := err.(prometheus.AlreadyRegisteredError); ok {
+					prometheus.Unregister(are.ExistingCollector)
+					if err := prometheus.Register(metric); err != nil {
+						// Log error but continue with other metrics
+						LogNormal("Failed to register metric after unregister: %v", err)
+					}
+				}
+			}
+		}
+		metricsInitialized = true
+	}
 
 	defaultMetricsCollector = collector
 	return collector
@@ -250,9 +280,13 @@ func MetricsMiddleware(config *MetricsConfig) gin.HandlerFunc {
 		})
 	}
 
-	// Initialize coletor se not existir
+	// Initialize collector if not exist
+	metricsInitMutex.RLock()
 	if defaultMetricsCollector == nil {
+		metricsInitMutex.RUnlock()
 		InitMetrics(config)
+	} else {
+		metricsInitMutex.RUnlock()
 	}
 
 	return func(c *gin.Context) {
@@ -264,12 +298,12 @@ func MetricsMiddleware(config *MetricsConfig) gin.HandlerFunc {
 
 		defaultMetricsCollector.httpActiveRequests.WithLabelValues(method, endpoint).Inc()
 
-		// Register tamanho da request
+		// Register request size
 		if c.Request.ContentLength > 0 {
 			defaultMetricsCollector.httpRequestSize.WithLabelValues(method, endpoint).Observe(float64(c.Request.ContentLength))
 		}
 
-		// Capturar response
+		// Capture response
 		writer := &metricsResponseWriter{
 			ResponseWriter: c.Writer,
 			size:           0,
@@ -317,11 +351,23 @@ func getEndpointPattern(c *gin.Context) string {
 	if fullPath := c.FullPath(); fullPath != "" {
 		return fullPath
 	}
-	return c.Request.URL.Path
+
+	// If no FullPath, try to reconstruct from params
+	path := c.Request.URL.Path
+	if len(c.Params) > 0 {
+		// Replace actual values with parameter names
+		for _, param := range c.Params {
+			path = strings.Replace(path, param.Value, ":"+param.Key, 1)
+		}
+	}
+
+	return path
 }
 
 // RecordCacheHit registra hit de cache
 func RecordCacheHit(cacheType, keyType string) {
+	metricsInitMutex.RLock()
+	defer metricsInitMutex.RUnlock()
 	if defaultMetricsCollector != nil {
 		defaultMetricsCollector.cacheHits.WithLabelValues(cacheType, keyType).Inc()
 	}
@@ -329,6 +375,8 @@ func RecordCacheHit(cacheType, keyType string) {
 
 // RecordCacheMiss registra miss de cache
 func RecordCacheMiss(cacheType, keyType string) {
+	metricsInitMutex.RLock()
+	defer metricsInitMutex.RUnlock()
 	if defaultMetricsCollector != nil {
 		defaultMetricsCollector.cacheMisses.WithLabelValues(cacheType, keyType).Inc()
 	}
@@ -336,6 +384,8 @@ func RecordCacheMiss(cacheType, keyType string) {
 
 // RecordCacheSize registra tamanho do cache
 func RecordCacheSize(cacheType string, size float64) {
+	metricsInitMutex.RLock()
+	defer metricsInitMutex.RUnlock()
 	if defaultMetricsCollector != nil {
 		defaultMetricsCollector.cacheSize.WithLabelValues(cacheType).Set(size)
 	}
@@ -343,6 +393,8 @@ func RecordCacheSize(cacheType string, size float64) {
 
 // RecordRateLimitHit records rate limit check
 func RecordRateLimitHit(endpoint, limitType string) {
+	metricsInitMutex.RLock()
+	defer metricsInitMutex.RUnlock()
 	if defaultMetricsCollector != nil {
 		defaultMetricsCollector.rateLimitHits.WithLabelValues(endpoint, limitType).Inc()
 	}
@@ -350,6 +402,8 @@ func RecordRateLimitHit(endpoint, limitType string) {
 
 // RecordRateLimitExceeded registra rate limit excedido
 func RecordRateLimitExceeded(endpoint, limitType string) {
+	metricsInitMutex.RLock()
+	defer metricsInitMutex.RUnlock()
 	if defaultMetricsCollector != nil {
 		defaultMetricsCollector.rateLimitExceeded.WithLabelValues(endpoint, limitType).Inc()
 	}
@@ -357,6 +411,8 @@ func RecordRateLimitExceeded(endpoint, limitType string) {
 
 // RecordValidationError records validation error
 func RecordValidationError(validationType, field string) {
+	metricsInitMutex.RLock()
+	defer metricsInitMutex.RUnlock()
 	if defaultMetricsCollector != nil {
 		defaultMetricsCollector.validationErrors.WithLabelValues(validationType, field).Inc()
 	}
@@ -364,6 +420,8 @@ func RecordValidationError(validationType, field string) {
 
 // RecordValidationTime records validation time
 func RecordValidationTime(validationType string, duration time.Duration) {
+	metricsInitMutex.RLock()
+	defer metricsInitMutex.RUnlock()
 	if defaultMetricsCollector != nil {
 		defaultMetricsCollector.validationTime.WithLabelValues(validationType).Observe(duration.Seconds())
 	}
@@ -371,6 +429,8 @@ func RecordValidationTime(validationType string, duration time.Duration) {
 
 // RecordMiddlewareTime records middleware execution time
 func RecordMiddlewareTime(middleware, endpoint string, duration time.Duration) {
+	metricsInitMutex.RLock()
+	defer metricsInitMutex.RUnlock()
 	if defaultMetricsCollector != nil {
 		defaultMetricsCollector.middlewareExecutionTime.WithLabelValues(middleware, endpoint).Observe(duration.Seconds())
 	}
@@ -378,6 +438,8 @@ func RecordMiddlewareTime(middleware, endpoint string, duration time.Duration) {
 
 // RecordMiddlewareError records middleware error
 func RecordMiddlewareError(middleware, errorType string) {
+	metricsInitMutex.RLock()
+	defer metricsInitMutex.RUnlock()
 	if defaultMetricsCollector != nil {
 		defaultMetricsCollector.middlewareErrors.WithLabelValues(middleware, errorType).Inc()
 	}
@@ -402,6 +464,7 @@ func HealthCheckHandler() gin.HandlerFunc {
 		}
 
 		// Add metrics if available
+		metricsInitMutex.RLock()
 		if defaultMetricsCollector != nil {
 			// Get some basic metrics via registry
 			metricFamilies, err := prometheus.DefaultGatherer.Gather()
@@ -421,6 +484,7 @@ func HealthCheckHandler() gin.HandlerFunc {
 				health["metrics"] = metrics
 			}
 		}
+		metricsInitMutex.RUnlock()
 
 		c.JSON(http.StatusOK, health)
 	}

@@ -170,11 +170,11 @@ func TestParseProxyConfig(t *testing.T) {
 }
 
 func TestBuildTargetURL(t *testing.T) {
-	manager := &ProxyManager{
-		config: ProxyConfig{
-			Path: "/users/{id}",
-		},
+	config := ProxyConfig{
+		Path: "/users/{id}",
 	}
+
+	manager := NewProxyManager(&config)
 
 	instance := &ProxyInstance{URL: "http://service:8080"}
 
@@ -280,4 +280,269 @@ func TestCreateProxyMiddleware(t *testing.T) {
 	assert.NotPanics(t, func() {
 		middleware(c)
 	})
+}
+
+// Tests for health checks functionality
+func TestProxyManager_PerformHealthChecks(t *testing.T) {
+
+	config := &ProxyConfig{
+		HealthInterval: "30s",
+		HealthCheck:    "/health",
+	}
+
+	manager := NewProxyManager(config)
+
+	// Test health check execution
+	manager.performHealthChecks()
+
+	// Verify that health checks were performed
+	// Note: This is a basic test to ensure the function doesn't panic
+	assert.NotNil(t, manager)
+}
+
+func TestProxyManager_PerformServiceDiscovery(t *testing.T) {
+
+	config := &ProxyConfig{
+		Discovery:     "static",
+		ConsulAddress: "http://localhost:8500",
+		K8sNamespace:  "default",
+	}
+
+	manager := NewProxyManager(config)
+
+	// Test service discovery execution
+	manager.performServiceDiscovery()
+
+	// Verify that discovery was attempted
+	// Note: This will fail in test environment without Consul, but we can verify the function doesn't panic
+	assert.NotNil(t, manager)
+}
+
+// Tests for proxy middleware with basic configuration
+func TestProxyMiddleware_Basic(t *testing.T) {
+	// Clear cache before test
+	clearProxyManagers()
+
+	middleware := createProxyMiddleware([]string{
+		"target=http://localhost:8080",
+		"timeout=10s",
+		"retries=3",
+	})
+	assert.NotNil(t, middleware)
+
+	// Create test context
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest("GET", "/test", http.NoBody)
+
+	// Execute middleware
+	middleware(c)
+
+	// Should handle service unavailability gracefully
+	assert.Equal(t, 502, w.Code)
+}
+
+// Tests for proxy with circuit breaker
+func TestProxyMiddleware_WithCircuitBreaker(t *testing.T) {
+	// Clear cache before test
+	clearProxyManagers()
+
+	middleware := createProxyMiddleware([]string{
+		"target=http://localhost:8081", // Different port to avoid cache
+		"circuit_breaker=30s",
+		"failure_threshold=5",
+	})
+	assert.NotNil(t, middleware)
+
+	// Create test context
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest("GET", "/test", http.NoBody)
+
+	// Execute middleware
+	middleware(c)
+
+	// Should handle service unavailability gracefully
+	assert.Equal(t, 502, w.Code)
+}
+
+// Tests for proxy with retry logic
+func TestProxyMiddleware_WithRetry(t *testing.T) {
+	// Clear cache before test
+	clearProxyManagers()
+
+	middleware := createProxyMiddleware([]string{
+		"target=http://localhost:8082", // Different port to avoid cache
+		"retries=3",
+		"retry_delay=1s",
+		"retry_backoff=exponential",
+	})
+	assert.NotNil(t, middleware)
+
+	// Create test context
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest("GET", "/test", http.NoBody)
+
+	// Execute middleware
+	middleware(c)
+
+	// Should return 503 when target service is unavailable
+	assert.Equal(t, 502, w.Code)
+}
+
+// Tests for proxy error handling
+func TestProxyMiddleware_ErrorHandling(t *testing.T) {
+	// Clear cache before test
+	clearProxyManagers()
+
+	middleware := createProxyMiddleware([]string{
+		"target=http://invalid-service:9999",
+		"timeout=5s",
+	})
+	assert.NotNil(t, middleware)
+
+	// Create test context
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest("GET", "/test", http.NoBody)
+
+	// Execute middleware
+	middleware(c)
+
+	// Should return 502 when target service is unreachable
+	assert.Equal(t, 502, w.Code)
+}
+
+// Tests for proxy with custom headers
+func TestProxyMiddleware_WithCustomHeaders(t *testing.T) {
+	// Clear cache before test
+	clearProxyManagers()
+
+	middleware := createProxyMiddleware([]string{
+		"target=http://localhost:8083", // Different port to avoid cache
+		"headers=X-Custom-Header:test-value,Authorization:Bearer test-token",
+	})
+	assert.NotNil(t, middleware)
+
+	// Create test context
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest("GET", "/test", http.NoBody)
+
+	// Execute middleware
+	middleware(c)
+
+	// Should return 502 when target service is unavailable
+	assert.Equal(t, 502, w.Code)
+}
+
+// Tests for proxy with path rewriting
+func TestProxyMiddleware_WithPathRewriting(t *testing.T) {
+	// Clear cache before test
+	clearProxyManagers()
+
+	middleware := createProxyMiddleware([]string{
+		"target=http://localhost:8084", // Different port to avoid cache
+		"path=/v1/",
+	})
+	assert.NotNil(t, middleware)
+
+	// Create test context
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest("GET", "/api/users", http.NoBody)
+
+	// Execute middleware
+	middleware(c)
+
+	// Should return 503 when target service is unavailable
+	assert.Equal(t, 502, w.Code)
+}
+
+// Tests for proxy manager creation
+func TestNewProxyManager(t *testing.T) {
+
+	config := &ProxyConfig{
+		Target:         "http://localhost:8080",
+		Timeout:        "10s",
+		Retries:        3,
+		LoadBalancer:   "round_robin",
+		HealthInterval: "30s",
+	}
+
+	manager := NewProxyManager(config)
+	assert.NotNil(t, manager)
+	assert.Equal(t, config.Target, manager.config.Target)
+	assert.Equal(t, config.Timeout, manager.config.Timeout)
+	assert.Equal(t, config.Retries, manager.config.Retries)
+	assert.Equal(t, config.LoadBalancer, manager.config.LoadBalancer)
+	assert.Equal(t, config.HealthInterval, manager.config.HealthInterval)
+}
+
+// Tests for proxy config parsing
+func TestParseProxyConfig_ValidArgs(t *testing.T) {
+
+	args := []string{
+		"target=http://localhost:8080",
+		"timeout=15s",
+		"retries=5",
+		"load_balancer=least_connections",
+		"health_check=/health",
+		"health_interval=60s",
+		"circuit_breaker=45s",
+		"failure_threshold=10",
+		"path=/api/",
+		"transform=request",
+	}
+
+	config := parseProxyConfig(args)
+
+	assert.Equal(t, "http://localhost:8080", config.Target)
+	assert.Equal(t, "15s", config.Timeout)
+	assert.Equal(t, 5, config.Retries)
+	assert.Equal(t, "least_connections", config.LoadBalancer)
+	assert.Equal(t, "/health", config.HealthCheck)
+	assert.Equal(t, "60s", config.HealthInterval)
+	assert.Equal(t, "45s", config.CircuitBreaker)
+	assert.Equal(t, 10, config.FailureThreshold)
+	assert.Equal(t, "/api/", config.Path)
+	assert.Equal(t, "request", config.Transform)
+}
+
+// Tests for proxy config parsing with invalid values
+func TestParseProxyConfig_InvalidValues(t *testing.T) {
+
+	args := []string{
+		"target=http://localhost:8080",
+		"timeout=invalid",
+		"retries=invalid",
+		"failure_threshold=invalid",
+	}
+
+	config := parseProxyConfig(args)
+
+	// Should use default values for invalid inputs
+	assert.Equal(t, "http://localhost:8080", config.Target)
+	assert.Equal(t, "invalid", config.Timeout)  // Invalid string values are kept as-is
+	assert.Equal(t, 3, config.Retries)          // Invalid int values use defaults
+	assert.Equal(t, 5, config.FailureThreshold) // Invalid int values use defaults
+}
+
+// Tests for proxy config parsing with malformed arguments
+func TestParseProxyConfig_MalformedArgs(t *testing.T) {
+
+	args := []string{
+		"target=http://localhost:8080",
+		"invalid-arg",
+		"key=value=extra",
+		"",
+	}
+
+	config := parseProxyConfig(args)
+
+	// Should handle malformed arguments gracefully
+	assert.Equal(t, "http://localhost:8080", config.Target)
+	assert.Equal(t, DefaultTimeout, config.Timeout)
+	assert.Equal(t, DefaultRetries, config.Retries)
 }

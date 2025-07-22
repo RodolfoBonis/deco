@@ -96,6 +96,13 @@ type ServiceDiscovery interface {
 var proxyManagers = make(map[string]*ProxyManager)
 var proxyManagersMu sync.RWMutex
 
+// clearProxyManagers clears the proxy managers cache (for testing)
+func clearProxyManagers() {
+	proxyManagersMu.Lock()
+	defer proxyManagersMu.Unlock()
+	proxyManagers = make(map[string]*ProxyManager)
+}
+
 // Default configurations
 const (
 	DefaultTimeout          = "10s"
@@ -429,13 +436,13 @@ func (pm *ProxyManager) buildTargetURL(instance *ProxyInstance, c *gin.Context) 
 			path = "/" + path
 		}
 		baseURL += path
-	} else {
-		// Use original path
+	} else if c.Request != nil && c.Request.URL != nil {
+		// Use original path if request is available
 		baseURL += c.Request.URL.Path
 	}
 
-	// Add query parameters
-	if c.Request.URL.RawQuery != "" {
+	// Add query parameters if request is available
+	if c.Request != nil && c.Request.URL != nil && c.Request.URL.RawQuery != "" {
 		baseURL += "?" + c.Request.URL.RawQuery
 	}
 

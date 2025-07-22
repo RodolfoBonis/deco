@@ -730,6 +730,9 @@ func DocsHandler(c *gin.Context) {
                                             <div class="middleware-icon"></div>
                                             <strong>{{.Name}}</strong>
                                         </div>
+                                        {{if .Description}}
+                                        <div class="description">{{.Description}}</div>
+                                        {{end}}
                                         {{if .Args}}
                                         <div class="middleware-args">
                                             {{range $key, $value := .Args}}
@@ -781,6 +784,9 @@ func DocsHandler(c *gin.Context) {
                                         <div class="middleware-icon"></div>
                                         <strong>{{.Name}}</strong>
                                     </div>
+                                    {{if .Description}}
+                                    <div class="description">{{.Description}}</div>
+                                    {{end}}
                                     {{if .Args}}
                                     <div class="middleware-args">
                                         {{range $key, $value := .Args}}
@@ -843,6 +849,9 @@ func DocsHandler(c *gin.Context) {
                                             <div class="middleware-icon"></div>
                                             <strong>{{.Name}}</strong>
                                         </div>
+                                        {{if .Description}}
+                                        <div class="description">{{.Description}}</div>
+                                        {{end}}
                                         {{if .Args}}
                                         <div class="middleware-args">
                                             {{range $key, $value := .Args}}
@@ -902,6 +911,9 @@ func DocsHandler(c *gin.Context) {
                                         <div class="middleware-icon"></div>
                                         <strong>{{.Name}}</strong>
                                     </div>
+                                    {{if .Description}}
+                                    <div class="description">{{.Description}}</div>
+                                    {{end}}
                                     {{if .Args}}
                                     <div class="middleware-args">
                                         {{range $key, $value := .Args}}
@@ -957,6 +969,9 @@ func DocsHandler(c *gin.Context) {
                                     <div class="middleware-icon"></div>
                                     <strong>{{.Name}}</strong>
                                 </div>
+                                {{if .Description}}
+                                <div class="description">{{.Description}}</div>
+                                {{end}}
                                 {{if .Args}}
                                 <div class="middleware-args">
                                     {{range $key, $value := .Args}}

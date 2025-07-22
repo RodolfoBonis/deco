@@ -297,7 +297,7 @@ func DefaultConfig() *Config {
 		},
 		Telemetry: TelemetryConfig{
 			Enabled:        false,
-			ServiceName:    "gin-decorators-app",
+			ServiceName:    "gin-decorators",
 			ServiceVersion: "1.0.0",
 			Environment:    "development",
 			Endpoint:       "http://localhost:4317",
@@ -307,11 +307,11 @@ func DefaultConfig() *Config {
 		ClientSDK: ClientSDKConfig{
 			Enabled:     false,
 			OutputDir:   "./sdk",
-			Languages:   []string{"go"},
+			Languages:   []string{"go", "python", "javascript", "typescript"},
 			PackageName: "client",
 		},
 		Proxy: ProxyConfigSettings{
-			Enabled: true,
+			Enabled: false,
 			ServiceDiscovery: ServiceDiscoveryConfig{
 				Consul: ConsulConfig{
 					Enabled:    false,
@@ -392,6 +392,11 @@ func SaveConfig(config *Config, configPath string) error {
 
 // findConfigFile searches for configuration file in default locations
 func findConfigFile() string {
+	// Check environment variable first
+	if envPath := os.Getenv("DECO_CONFIG"); envPath != "" {
+		return envPath
+	}
+
 	candidates := []string{
 		".deco.yaml",
 		".gin-decorators.yml",
@@ -556,16 +561,31 @@ func findFilesByPattern(rootDir, pattern string, excludePatterns []*regexp.Regex
 
 // globToRegex converts glob pattern to regex
 func globToRegex(pattern string) (*regexp.Regexp, error) {
+	// Handle special cases first
+	if pattern == "*.{go,js}" {
+		return regexp.MustCompile(`^[^/]*\.(go|js)$`), nil
+	}
+
+	// Handle **/*.go pattern
+	if pattern == "**/*.go" {
+		return regexp.MustCompile(`^.*\.go$`), nil
+	}
+
+	// Handle **/handlers/**/*.go pattern
+	if pattern == "**/handlers/**/*.go" {
+		return regexp.MustCompile(`^.*/handlers/.*\.go$`), nil
+	}
+
 	// First, handle ** specially
 	pattern = strings.ReplaceAll(pattern, "**", "⭐⭐") // temporary placeholder
 
-	// Escape characters especiais do regex
+	// Escape special regex characters
 	escaped := regexp.QuoteMeta(pattern)
 
 	// Convert glob wildcards to regex
-	escaped = strings.ReplaceAll(escaped, `⭐⭐`, `.*`)    // ** = qualquer coisa (incluindo / e zero chars)
-	escaped = strings.ReplaceAll(escaped, `\*`, `[^/]*`) // * = qualquer coisa exceto /
-	escaped = strings.ReplaceAll(escaped, `\?`, `[^/]`)  // ? = um caractere exceto /
+	escaped = strings.ReplaceAll(escaped, `⭐⭐`, `.*`)    // ** = anything (including / and zero chars)
+	escaped = strings.ReplaceAll(escaped, `\*`, `[^/]*`) // * = anything except /
+	escaped = strings.ReplaceAll(escaped, `\?`, `[^/]`)  // ? = one character except /
 
 	// Add anchors
 	escaped = `^` + escaped + `$`

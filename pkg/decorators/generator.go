@@ -15,18 +15,6 @@ import (
 
 // escapeGoString escapes a string for safe use in generated Go code
 func escapeGoString(s string) string {
-	// Handle empty strings
-	if s == "" {
-		return `""`
-	}
-
-	// Replace problematic characters that could break the template
-	s = strings.ReplaceAll(s, "\n", "\\n")
-	s = strings.ReplaceAll(s, "\r", "\\r")
-	s = strings.ReplaceAll(s, "\t", "\\t")
-	s = strings.ReplaceAll(s, `"`, `\"`)
-	s = strings.ReplaceAll(s, `\`, `\\`)
-
 	// Use strconv.Quote to properly escape the string
 	return strconv.Quote(s)
 }
@@ -212,14 +200,13 @@ func calculateStats(routes []*RouteMeta) generationStats {
 
 	for _, route := range routes {
 		stats.wsHandlerCount += len(route.WebSocketHandlers)
-		for _, marker := range route.Markers {
-			if marker.Name == "Proxy" {
+		for _, middleware := range route.MiddlewareCalls {
+			if strings.Contains(middleware, "Proxy") {
 				stats.proxyCount++
-				LogVerbose("🔍 Found Proxy marker in route: %s", route.FuncName)
+				LogVerbose("🔍 Found Proxy middleware in route: %s", route.FuncName)
 			}
-			if isMiddlewareMarker(marker.Name) {
-				stats.middlewareCount++
-			}
+			// Count all middleware calls
+			stats.middlewareCount++
 		}
 	}
 
@@ -514,49 +501,63 @@ func validateStructure(filePath string) error {
 		return err
 	}
 
-	var hasInitFunc bool
-	var hasImports bool
-	var hasRegistrations bool
-
-	// Verify imports
-	if len(file.Imports) > 0 {
-		hasImports = true
-	}
-
-	// Verify declarations
-	for _, decl := range file.Decls {
-		// Verify init function
-		if fnDecl, ok := decl.(*ast.FuncDecl); ok {
-			if fnDecl.Name.Name == "init" {
-				hasInitFunc = true
-
-				// Check if there are route registrations
-				ast.Inspect(fnDecl, func(n ast.Node) bool {
-					if callExpr, ok := n.(*ast.CallExpr); ok {
-						if selExpr, ok := callExpr.Fun.(*ast.SelectorExpr); ok {
-							if selExpr.Sel.Name == "RegisterRouteWithMeta" {
-								hasRegistrations = true
-							}
-						}
-					}
-					return true
-				})
-			}
-		}
-	}
+	structure := validateFileStructure(file)
 
 	// Validate minimum expected structure
-	if !hasImports {
+	if !structure.hasImports {
 		return fmt.Errorf("necessary imports not founds")
 	}
 
-	if !hasInitFunc {
+	if !structure.hasInitFunc {
 		return fmt.Errorf("init() function not found")
 	}
 
-	if !hasRegistrations {
+	// Allow files without route registrations if they have WebSocket handlers
+	if !structure.hasRegistrations && !structure.hasWebSocketHandlers {
 		return fmt.Errorf("route registrations not founds na init() function")
 	}
 
 	return nil
+}
+
+type fileStructure struct {
+	hasImports           bool
+	hasInitFunc          bool
+	hasRegistrations     bool
+	hasWebSocketHandlers bool
+}
+
+func validateFileStructure(file *ast.File) fileStructure {
+	structure := fileStructure{
+		hasImports: len(file.Imports) > 0,
+	}
+
+	// Verify declarations
+	for _, decl := range file.Decls {
+		if fnDecl, ok := decl.(*ast.FuncDecl); ok {
+			if fnDecl.Name.Name == "init" {
+				structure.hasInitFunc = true
+				structure = validateInitFunction(fnDecl, structure)
+			}
+		}
+	}
+
+	return structure
+}
+
+func validateInitFunction(fnDecl *ast.FuncDecl, structure fileStructure) fileStructure {
+	ast.Inspect(fnDecl, func(n ast.Node) bool {
+		if callExpr, ok := n.(*ast.CallExpr); ok {
+			if selExpr, ok := callExpr.Fun.(*ast.SelectorExpr); ok {
+				switch selExpr.Sel.Name {
+				case "RegisterRouteWithMeta":
+					structure.hasRegistrations = true
+				case "RegisterDefaultWebSocketHandlers":
+					structure.hasWebSocketHandlers = true
+				}
+			}
+		}
+		return true
+	})
+	return structure
 }

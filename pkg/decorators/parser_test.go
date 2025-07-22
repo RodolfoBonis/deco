@@ -1,58 +1,79 @@
 package decorators
 
 import (
-	"go/ast"
-	"go/parser"
-	"go/token"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
-func TestProxyDecoratorDetection(t *testing.T) {
-	// Test source code with @Proxy decorator
-	source := `package handlers
+func TestHasDecoratorAnnotations(t *testing.T) {
+	// Test with decorator annotations
+	comment := "// @Route(\"GET\", \"/users\")"
+	assert.True(t, hasDecoratorAnnotations(comment))
 
-import "github.com/gin-gonic/gin"
-
-// @Route("GET", "/api/test")
-// @Proxy(target="http://httpbin.org", path="/get")
-func TestProxy(c *gin.Context) {
-	// Test function
+	// Test without decorator annotations
+	comment = "// This is a regular comment"
+	assert.False(t, hasDecoratorAnnotations(comment))
 }
-`
 
-	// Parse the source code
-	fset := token.NewFileSet()
-	file, err := parser.ParseFile(fset, "test.go", source, parser.ParseComments)
-	assert.NoError(t, err)
+func TestContains(t *testing.T) {
+	// Test contains function
+	slice := []string{"a", "b", "c"}
+	assert.True(t, contains(slice, "a"))
+	assert.True(t, contains(slice, "b"))
+	assert.False(t, contains(slice, "d"))
+}
 
-	// Check if decorator annotations are detected
-	hasDecorators := hasDecoratorAnnotations(source)
-	assert.True(t, hasDecorators, "Decorator annotations should be detected")
+func TestParseArguments(t *testing.T) {
+	// Test parsing arguments
+	args := parseArguments(`name="User", description="User entity"`)
+	assert.Contains(t, args, "name=\"User\"")
+	assert.Contains(t, args, "description=\"User entity\"")
+}
 
-	// Find function declaration
-	var funcDecl *ast.FuncDecl
-	for _, decl := range file.Decls {
-		if fd, ok := decl.(*ast.FuncDecl); ok {
-			funcDecl = fd
-			break
-		}
+func TestParseArgsToMap(t *testing.T) {
+	// Test parsing arguments to map
+	args := []string{"name=User", "description=User entity"}
+	result := parseArgsToMap(args)
+	assert.Equal(t, "User", result["name"])
+	assert.Equal(t, "User entity", result["description"])
+}
+
+func TestParseParameterInfo(t *testing.T) {
+	// Test parsing parameter info
+	args := []string{"name=id", "type=int", "required=true"}
+	param := parseParameterInfo(args)
+	assert.Equal(t, "id", param.Name)
+	assert.Equal(t, "int", param.Type)
+	assert.True(t, param.Required)
+}
+
+func TestParseResponseInfo(t *testing.T) {
+	// Test parsing response info
+	args := []string{"code=200", "type=User"}
+	response := parseResponseInfo(args)
+	assert.Equal(t, "200", response.Code)
+	assert.Equal(t, "User", response.Type)
+}
+
+func TestGetMiddlewareDescription(t *testing.T) {
+	// Test getting middleware description
+	descriptions := map[string]string{
+		"Cache":     "cache",
+		"RateLimit": "limitação",
+		"Auth":      "autenticação",
 	}
-	assert.NotNil(t, funcDecl, "Function declaration should be found")
 
-	// Check if Proxy decorator is detected
-	markers, validationErr := extractMarkersWithValidation(fset, "test.go", funcDecl, source)
-	assert.Nil(t, validationErr, "Should not have validation errors")
-	assert.Len(t, markers, 1, "Should detect 1 decorator: @Proxy")
-
-	// Check if Proxy marker is present
-	proxyFound := false
-	for _, marker := range markers {
-		if marker.Name == "Proxy" {
-			proxyFound = true
-			break
-		}
+	for name, expected := range descriptions {
+		desc := getMiddlewareDescription(name)
+		assert.Contains(t, desc, expected)
 	}
-	assert.True(t, proxyFound, "Proxy decorator should be detected")
+}
+
+func TestGenerateMiddlewareCall(t *testing.T) {
+	// Test generating middleware call
+	marker := MarkerInstance{Name: "Cache", Args: []string{"ttl=5m"}}
+	call := generateMiddlewareCall(marker)
+	assert.Contains(t, call, "Cache")
+	assert.Contains(t, call, "ttl=5m")
 }

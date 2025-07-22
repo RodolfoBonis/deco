@@ -9,7 +9,6 @@ import (
 )
 
 func TestValidationError_Error(t *testing.T) {
-	t.Parallel()
 
 	tests := []struct {
 		name     string
@@ -57,7 +56,6 @@ func TestValidationError_Error(t *testing.T) {
 }
 
 func TestRoute_Structure(t *testing.T) {
-	t.Parallel()
 
 	route := &Route{
 		Method:      "GET",
@@ -73,7 +71,6 @@ func TestRoute_Structure(t *testing.T) {
 }
 
 func TestMiddlewareInfo_Structure(t *testing.T) {
-	t.Parallel()
 
 	middleware := &MiddlewareInfo{
 		Name:        "auth",
@@ -89,7 +86,6 @@ func TestMiddlewareInfo_Structure(t *testing.T) {
 }
 
 func TestFrameworkStats_Structure(t *testing.T) {
-	t.Parallel()
 
 	stats := &FrameworkStats{
 		TotalRoutes:       10,
@@ -111,7 +107,6 @@ func TestFrameworkStats_Structure(t *testing.T) {
 }
 
 func TestParserStats_Structure(t *testing.T) {
-	t.Parallel()
 
 	errors := []ValidationError{
 		{File: "test.go", Line: 10, Message: "Error 1", Code: "ERR1"},
@@ -142,7 +137,6 @@ func TestParserStats_Structure(t *testing.T) {
 }
 
 func TestSchemaInfo_Structure(t *testing.T) {
-	t.Parallel()
 
 	properties := map[string]*PropertyInfo{
 		"name": {
@@ -193,7 +187,6 @@ func TestSchemaInfo_Structure(t *testing.T) {
 }
 
 func TestPropertyInfo_Validation(t *testing.T) {
-	t.Parallel()
 
 	tests := []struct {
 		name     string
@@ -288,7 +281,6 @@ func TestPropertyInfo_Validation(t *testing.T) {
 }
 
 func TestEntityMeta_Structure(t *testing.T) {
-	t.Parallel()
 
 	markers := []MarkerInstance{
 		{Name: "Schema", Args: []string{"User entity"}},
@@ -352,7 +344,6 @@ func TestEntityMeta_Structure(t *testing.T) {
 }
 
 func TestFieldMeta_Structure(t *testing.T) {
-	t.Parallel()
 
 	field := &FieldMeta{
 		Name:        "Email",

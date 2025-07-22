@@ -37,6 +37,27 @@ type SDKManager struct {
 	config     ClientSDKConfig
 }
 
+// generateClassName generates a proper class name from package name
+func generateClassName(packageName string) string {
+	// Handle common patterns
+	if strings.Contains(strings.ToLower(packageName), "api") {
+		// Convert "testapi" to "TestAPIClient"
+		parts := strings.Split(strings.ToLower(packageName), "api")
+		if len(parts) > 0 {
+			prefix := parts[0]
+			if prefix != "" {
+				caser := cases.Title(language.English)
+				return caser.String(prefix) + "APIClient"
+			}
+		}
+		return "APIClient"
+	}
+
+	// Fallback: use Title case + "Client"
+	caser := cases.Title(language.English)
+	return caser.String(packageName) + "Client"
+}
+
 // NewSDKManager creates new SDK manager
 func NewSDKManager(config *ClientSDKConfig) *SDKManager {
 	manager := &SDKManager{
@@ -217,6 +238,7 @@ func (g *GoSDKGenerator) prepareTemplateData(spec *OpenAPISpec, config *ClientSD
 
 	return map[string]interface{}{
 		"PackageName": config.PackageName,
+		"ClassName":   generateClassName(config.PackageName),
 		"ServiceName": spec.Info.Title,
 		"GeneratedAt": time.Now().Format("2006-01-02 15:04:05"),
 		"Endpoints":   endpoints,
@@ -228,13 +250,48 @@ func (g *GoSDKGenerator) generateFunctionName(method, path string) string {
 	parts := strings.Split(strings.Trim(path, "/"), "/")
 	var name strings.Builder
 
-	// Use cases.Title instead of deprecated strings.Title
-	caser := cases.Title(language.English)
-	name.WriteString(caser.String(strings.ToLower(method)))
+	// Map HTTP methods to more descriptive prefixes
+	methodPrefix := map[string]string{
+		"GET":    "Get",
+		"POST":   "Create",
+		"PUT":    "Update",
+		"DELETE": "Delete",
+		"PATCH":  "Patch",
+	}
+
+	prefix, exists := methodPrefix[strings.ToUpper(method)]
+	if exists {
+		name.WriteString(prefix)
+	} else {
+		// Use cases.Title instead of deprecated strings.Title
+		caser := cases.Title(language.English)
+		name.WriteString(caser.String(strings.ToLower(method)))
+	}
 
 	for _, part := range parts {
 		if !strings.HasPrefix(part, "{") {
-			name.WriteString(caser.String(part))
+			// Handle special cases like "api/v1" -> "APIV1"
+			switch part {
+			case "api":
+				name.WriteString("API")
+			case "v1":
+				name.WriteString("V1")
+			default:
+				// Use cases.Title instead of deprecated strings.Title
+				caser := cases.Title(language.English)
+				name.WriteString(caser.String(part))
+			}
+		} else {
+			// Handle path parameters like {id} -> ByID
+			paramName := strings.Trim(part, "{}")
+			switch paramName {
+			case "id":
+				name.WriteString("ByID")
+			default:
+				// Use cases.Title instead of deprecated strings.Title
+				caser := cases.Title(language.English)
+				name.WriteString("By" + caser.String(paramName))
+			}
 		}
 	}
 
@@ -337,6 +394,8 @@ func (g *GoSDKGenerator) convertTypeToGo(openAPIType string) string {
 		return "bool"
 	case "array":
 		return "[]interface{}"
+	case "object":
+		return "map[string]interface{}"
 	default:
 		return "interface{}"
 	}
@@ -436,9 +495,8 @@ class APIError(Exception):
 }
 
 func (p *PythonSDKGenerator) prepareTemplateData(spec *OpenAPISpec, config *ClientSDKConfig) map[string]interface{} {
-	// Use cases.Title instead of deprecated strings.Title
-	caser := cases.Title(language.English)
-	className := caser.String(config.PackageName) + "Client"
+	// Generate proper class name (e.g., "testapi" -> "TestAPIClient")
+	className := generateClassName(config.PackageName)
 	endpoints := make([]map[string]interface{}, 0)
 
 	for path, pathItem := range spec.Paths {
@@ -467,15 +525,35 @@ func (p *PythonSDKGenerator) prepareTemplateData(spec *OpenAPISpec, config *Clie
 }
 
 func (p *PythonSDKGenerator) generateFunctionName(method, path string) string {
-	// Convert to snake_case
+	// Convert to snake_case with more descriptive method names
 	parts := strings.Split(strings.Trim(path, "/"), "/")
 	var name strings.Builder
-	name.WriteString(strings.ToLower(method))
+
+	// Map HTTP methods to more descriptive prefixes
+	methodPrefix := map[string]string{
+		"GET":    "get",
+		"POST":   "create",
+		"PUT":    "update",
+		"DELETE": "delete",
+		"PATCH":  "patch",
+	}
+
+	prefix, exists := methodPrefix[strings.ToUpper(method)]
+	if exists {
+		name.WriteString(prefix)
+	} else {
+		name.WriteString(strings.ToLower(method))
+	}
 
 	for _, part := range parts {
 		if !strings.HasPrefix(part, "{") {
 			name.WriteString("_")
 			name.WriteString(strings.ToLower(part))
+		} else {
+			// Handle path parameters like {id} -> _by_id
+			paramName := strings.Trim(part, "{}")
+			name.WriteString("_by_")
+			name.WriteString(strings.ToLower(paramName))
 		}
 	}
 
@@ -545,7 +623,9 @@ func (p *PythonSDKGenerator) convertTypeToPython(openAPIType string) string {
 	case "boolean":
 		return "bool"
 	case "array":
-		return "list"
+		return "List"
+	case "object":
+		return "Dict"
 	default:
 		return "Any"
 	}
@@ -638,9 +718,8 @@ module.exports = {{.ClassName}};
 }
 
 func (j *JavaScriptSDKGenerator) prepareTemplateData(spec *OpenAPISpec, config *ClientSDKConfig) map[string]interface{} {
-	// Use cases.Title instead of deprecated strings.Title
-	caser := cases.Title(language.English)
-	className := caser.String(config.PackageName) + "Client"
+	// Generate proper class name
+	className := generateClassName(config.PackageName)
 	endpoints := make([]map[string]interface{}, 0)
 
 	for path, pathItem := range spec.Paths {
@@ -825,9 +904,8 @@ export class APIError extends Error {
 }
 
 func (t *TypeScriptSDKGenerator) prepareTemplateData(spec *OpenAPISpec, config *ClientSDKConfig) map[string]interface{} {
-	// Use cases.Title instead of deprecated strings.Title
-	caser := cases.Title(language.English)
-	className := caser.String(config.PackageName) + "Client"
+	// Generate proper class name
+	className := generateClassName(config.PackageName)
 	endpoints := make([]map[string]interface{}, 0)
 
 	for path, pathItem := range spec.Paths {
@@ -925,6 +1003,8 @@ func (t *TypeScriptSDKGenerator) convertTypeToTypeScript(openAPIType string) str
 		return "boolean"
 	case "array":
 		return "any[]"
+	case "object":
+		return "Record<string, any>"
 	default:
 		return "any"
 	}

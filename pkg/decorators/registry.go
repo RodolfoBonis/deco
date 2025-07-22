@@ -4,6 +4,7 @@ import (
 	"log"
 	"reflect"
 	"strings"
+	"sync"
 
 	"github.com/gin-gonic/gin"
 )
@@ -52,14 +53,18 @@ type RouteEntry struct {
 	WebSocketHandlers []string          `json:"websocketHandlers,omitempty"` // WebSocket message types this function handles
 }
 
-// global route registry
-var routes []RouteEntry
-
-// global groups registry
-var groups = make(map[string]*GroupInfo)
+// global route registry with mutex protection
+var (
+	routes        []RouteEntry
+	groups        = make(map[string]*GroupInfo)
+	registryMutex sync.RWMutex
+)
 
 // RegisterGroup registers a new route group
 func RegisterGroup(name, prefix, description string) *GroupInfo {
+	registryMutex.Lock()
+	defer registryMutex.Unlock()
+
 	group := &GroupInfo{
 		Name:        name,
 		Prefix:      prefix,
@@ -72,12 +77,22 @@ func RegisterGroup(name, prefix, description string) *GroupInfo {
 
 // GetGroup returns information of a group
 func GetGroup(name string) *GroupInfo {
+	registryMutex.RLock()
+	defer registryMutex.RUnlock()
 	return groups[name]
 }
 
 // GetGroups returns all registered groups
 func GetGroups() map[string]*GroupInfo {
-	return groups
+	registryMutex.RLock()
+	defer registryMutex.RUnlock()
+
+	// Return a copy to avoid race conditions
+	groupsCopy := make(map[string]*GroupInfo)
+	for k, v := range groups {
+		groupsCopy[k] = v
+	}
+	return groupsCopy
 }
 
 // RegisterRoute registers a new route in the framework
@@ -111,7 +126,10 @@ func RegisterRouteWithMeta(entry *RouteEntry) {
 		entry.Tags = append(entry.Tags, entry.Group.Name)
 	}
 
+	registryMutex.Lock()
 	routes = append(routes, *entry)
+	registryMutex.Unlock()
+
 	LogVerbose("Route registrada: %s %s -> %s", entry.Method, entry.Path, entry.FuncName)
 }
 
@@ -142,8 +160,13 @@ func DefaultWithSecurity(securityConfig *SecurityConfig) *gin.Engine {
 	r.GET("/decorators/swagger", securityMiddleware, SwaggerRedirectHandler)
 
 	// Register all framework routes
-	for i := range routes {
-		route := &routes[i]
+	registryMutex.RLock()
+	routesCopy := make([]RouteEntry, len(routes))
+	copy(routesCopy, routes)
+	registryMutex.RUnlock()
+
+	for i := range routesCopy {
+		route := &routesCopy[i]
 		// Combine middlewares + main handler
 		handlers := make([]gin.HandlerFunc, 0, len(route.Middlewares)+1)
 		handlers = append(handlers, route.Middlewares...)
@@ -151,13 +174,19 @@ func DefaultWithSecurity(securityConfig *SecurityConfig) *gin.Engine {
 		r.Handle(route.Method, route.Path, handlers...)
 	}
 
-	LogNormal("Framework gin-decorators inicializado com %d routes", len(routes))
+	LogNormal("Framework gin-decorators inicializado com %d routes", len(routesCopy))
 	return r
 }
 
 // GetRoutes returns all registered routes (used for documentation)
 func GetRoutes() []RouteEntry {
-	return routes
+	registryMutex.RLock()
+	defer registryMutex.RUnlock()
+
+	// Return a copy to avoid race conditions
+	routesCopy := make([]RouteEntry, len(routes))
+	copy(routesCopy, routes)
+	return routesCopy
 }
 
 // getFuncName extracts function name from a handler

@@ -39,18 +39,14 @@ func NewCircuitBreaker(failureThreshold int, recoveryTimeout time.Duration) *Cir
 
 // IsOpen checks if the circuit breaker is open
 func (cb *CircuitBreakerImpl) IsOpen() bool {
-	cb.mu.RLock()
-	defer cb.mu.RUnlock()
+	cb.mu.Lock()
+	defer cb.mu.Unlock()
 
 	switch cb.state {
 	case StateOpen:
 		// Check if recovery timeout has passed
 		if time.Since(cb.lastFailureTime) >= cb.recoveryTimeout {
-			cb.mu.RUnlock()
-			cb.mu.Lock()
 			cb.state = StateHalfOpen
-			cb.mu.Unlock()
-			cb.mu.RLock()
 		}
 		return cb.state == StateOpen
 
@@ -78,7 +74,7 @@ func (cb *CircuitBreakerImpl) RecordSuccess() {
 		cb.state = StateClosed
 		cb.failureCount = 0
 	case StateClosed:
-		// Already closed, just update success time
+		// Already closed, just update success time and reset failure count
 		cb.failureCount = 0
 	}
 }

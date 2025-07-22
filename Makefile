@@ -1,4 +1,4 @@
-.PHONY: help build test lint clean install dev deps security bench release all check format
+.PHONY: help build test lint clean install dev deps security bench release all check format test-infra-start test-infra-stop test-infra-restart test-infra-status
 
 # Variáveis
 BINARY_NAME=deco
@@ -84,4 +84,27 @@ format: ## Formata o código
 	@echo "🎨 Formatando código..."
 	gofmt -w .
 	goimports -w .
-	@echo "✅ Código formatado" 
+	@echo "✅ Código formatado"
+
+# Infraestrutura de Teste
+test-infra-start: ## Inicia infraestrutura de teste (Redis + OpenTelemetry)
+	@echo "🚀 Iniciando infraestrutura de teste..."
+	@./scripts/test-infra.sh start
+
+test-infra-stop: ## Para infraestrutura de teste
+	@echo "🛑 Parando infraestrutura de teste..."
+	@./scripts/test-infra.sh stop
+
+test-infra-restart: ## Reinicia infraestrutura de teste
+	@echo "🔄 Reiniciando infraestrutura de teste..."
+	@./scripts/test-infra.sh restart
+
+test-infra-status: ## Mostra status da infraestrutura de teste
+	@echo "📊 Status da infraestrutura de teste..."
+	@./scripts/test-infra.sh status
+
+test-with-infra: test-infra-start ## Executa testes com infraestrutura
+	@echo "🧪 Executando testes com infraestrutura..."
+	@make test
+	@echo "🛑 Parando infraestrutura de teste..."
+	@./scripts/test-infra.sh stop 

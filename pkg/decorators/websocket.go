@@ -222,11 +222,13 @@ func (h *WebSocketHub) pingConnections() {
 
 	for id, conn := range h.connections {
 		conn.mu.Lock()
-		if err := conn.Conn.WriteMessage(websocket.PingMessage, nil); err != nil {
-			log.Printf("WebSocket: Error sending ping to %s: %v", id, err)
-			conn.mu.Unlock()
-			h.unregister <- conn
-			continue
+		if conn.Conn != nil {
+			if err := conn.Conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+				log.Printf("WebSocket: Error sending ping to %s: %v", id, err)
+				conn.mu.Unlock()
+				h.unregister <- conn
+				continue
+			}
 		}
 		conn.mu.Unlock()
 	}
