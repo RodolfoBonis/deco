@@ -14,6 +14,7 @@ import (
 )
 
 // Tests for WebSocket functionality
+
 func TestWebSocketHub_InitWebSocket(t *testing.T) {
 	// Remove  to avoid race conditions
 

@@ -3622,7 +3622,7 @@ func LoadConfig(configPath string) (*Config, error) <span class="cov2" title="3"
                 return DefaultConfig(), nil
         }</span>
 
-        <span class="cov2" title="2">data, err := os.ReadFile(configPath)
+        <span class="cov1" title="2">data, err := os.ReadFile(configPath)
         if err != nil </span><span class="cov1" title="1">{
                 return nil, fmt.Errorf("error reading file de configuration %s: %v", configPath, err)
         }</span>
@@ -3659,7 +3659,7 @@ func findConfigFile() string <span class="cov2" title="3">{
                 return envPath
         }</span>
 
-        <span class="cov2" title="2">candidates := []string{
+        <span class="cov1" title="2">candidates := []string{
                 ".deco.yaml",
                 ".gin-decorators.yml",
                 "gin-decorators.yaml",
@@ -3754,12 +3754,12 @@ func (c *Config) DiscoverHandlers(rootDir string) ([]string, error) <span class=
         }</span>
 
         // Process each inclusion pattern
-        <span class="cov3" title="5">for _, includePattern := range c.Handlers.Include </span><span class="cov4" title="8">{
+        <span class="cov3" title="5">for _, includePattern := range c.Handlers.Include </span><span class="cov3" title="8">{
                 files, err := findFilesByPattern(rootDir, includePattern, excludePatterns)
                 if err != nil </span><span class="cov0" title="0">{
                         return nil, fmt.Errorf("error processing pattern '%s': %v", includePattern, err)
                 }</span>
-                <span class="cov4" title="8">handlerFiles = append(handlerFiles, files...)</span>
+                <span class="cov3" title="8">handlerFiles = append(handlerFiles, files...)</span>
         }
 
         // Remove duplicates
@@ -3776,14 +3776,14 @@ func findFilesByPattern(rootDir, pattern string, excludePatterns []*regexp.Regex
                 return nil, err
         }</span>
 
-        <span class="cov4" title="9">err = filepath.WalkDir(rootDir, func(path string, d fs.DirEntry, err error) error </span><span class="cov10" title="478">{
+        <span class="cov4" title="9">err = filepath.WalkDir(rootDir, func(path string, d fs.DirEntry, err error) error </span><span class="cov10" title="541">{
                 if err != nil </span><span class="cov0" title="0">{
                         return nil // Ignore access errors
                 }</span>
 
                 // Skip directories that match excludes
-                <span class="cov10" title="478">if d.IsDir() </span><span class="cov4" title="15">{
-                        for _, excludePattern := range excludePatterns </span><span class="cov7" title="64">{
+                <span class="cov10" title="541">if d.IsDir() </span><span class="cov4" title="15">{
+                        for _, excludePattern := range excludePatterns </span><span class="cov6" title="64">{
                                 if excludePattern.MatchString(path) </span><span class="cov0" title="0">{
                                         return filepath.SkipDir
                                 }</span>
@@ -3792,13 +3792,13 @@ func findFilesByPattern(rootDir, pattern string, excludePatterns []*regexp.Regex
                 }
 
                 // Check if file matches pattern
-                <span class="cov9" title="463">relPath, err := filepath.Rel(rootDir, path)
+                <span class="cov9" title="526">relPath, err := filepath.Rel(rootDir, path)
                 if err != nil </span><span class="cov0" title="0">{
                         return nil
                 }</span>
 
                 // Normalize path to always use /
-                <span class="cov9" title="463">relPath = filepath.ToSlash(relPath)
+                <span class="cov9" title="526">relPath = filepath.ToSlash(relPath)
 
                 if patternRegex.MatchString(relPath) </span><span class="cov3" title="7">{
                         // Check if not excluded
@@ -3815,7 +3815,7 @@ func findFilesByPattern(rootDir, pattern string, excludePatterns []*regexp.Regex
                         }</span>
                 }
 
-                <span class="cov9" title="463">return nil</span>
+                <span class="cov9" title="526">return nil</span>
         })
 
         <span class="cov4" title="9">return matchedFiles, err</span>
@@ -3829,7 +3829,7 @@ func globToRegex(pattern string) (*regexp.Regexp, error) <span class="cov6" titl
         }</span>
 
         // Handle **/*.go pattern
-        <span class="cov6" title="34">if pattern == "**/*.go" </span><span class="cov3" title="4">{
+        <span class="cov6" title="34">if pattern == "**/*.go" </span><span class="cov2" title="4">{
                 return regexp.MustCompile(`^.*\.go$`), nil
         }</span>
 
@@ -3856,7 +3856,7 @@ func globToRegex(pattern string) (*regexp.Regexp, error) <span class="cov6" titl
 }
 
 // compilePatterns compiles pattern list to regex
-func compilePatterns(patterns []string) ([]*regexp.Regexp, error) <span class="cov4" title="8">{
+func compilePatterns(patterns []string) ([]*regexp.Regexp, error) <span class="cov3" title="8">{
         compiled := make([]*regexp.Regexp, 0, len(patterns))
 
         for _, pattern := range patterns </span><span class="cov4" title="15">{
@@ -3867,7 +3867,7 @@ func compilePatterns(patterns []string) ([]*regexp.Regexp, error) <span class="c
                 <span class="cov4" title="15">compiled = append(compiled, regex)</span>
         }
 
-        <span class="cov4" title="8">return compiled, nil</span>
+        <span class="cov3" title="8">return compiled, nil</span>
 }
 
 // removeDuplicates removes duplicate files from list
@@ -3886,12 +3886,12 @@ func removeDuplicates(files []string) []string <span class="cov3" title="6">{
 }
 
 // Validate validates the configuration
-func (c *Config) Validate() error <span class="cov2" title="2">{
+func (c *Config) Validate() error <span class="cov1" title="2">{
         if c.Version == "" </span><span class="cov0" title="0">{
                 return fmt.Errorf("version is required")
         }</span>
 
-        <span class="cov2" title="2">if len(c.Handlers.Include) == 0 </span><span class="cov1" title="1">{
+        <span class="cov1" title="2">if len(c.Handlers.Include) == 0 </span><span class="cov1" title="1">{
                 return fmt.Errorf("at least one pattern de include is required")
         }</span>
 
@@ -5231,21 +5231,6 @@ func calculateStats(routes []*RouteMeta) generationStats <span class="cov0" titl
         }
 
         <span class="cov0" title="0">return stats</span>
-}
-
-// isMiddlewareMarker checks if a marker is a middleware marker
-func isMiddlewareMarker(markerName string) bool <span class="cov0" title="0">{
-        nonMiddlewareMarkers := []string{
-                "Route", "Summary", "Description", "Tag", "Response",
-                "RequestBody", "Schema", "Group", "Param",
-        }
-
-        for _, nonMiddleware := range nonMiddlewareMarkers </span><span class="cov0" title="0">{
-                if markerName == nonMiddleware </span><span class="cov0" title="0">{
-                        return false
-                }</span>
-        }
-        <span class="cov0" title="0">return true</span>
 }
 
 // getInitTemplate returns the default template for code generation
@@ -8030,7 +8015,7 @@ func findSchemaByPattern(pattern string) *SchemaInfo <span class="cov5" title="6
         }</span>
 
         // Then try pattern match
-        <span class="cov4" title="4">for name, schema := range schemas </span><span class="cov4" title="4">{
+        <span class="cov4" title="4">for name, schema := range schemas </span><span class="cov3" title="3">{
                 if strings.Contains(name, pattern) </span><span class="cov2" title="2">{
                         return schema
                 }</span>
@@ -10732,19 +10717,19 @@ func detectHandlersDirectory() string <span class="cov5" title="102">{
 
         // Try to search recursively in current directory
         <span class="cov5" title="102">var foundDir string
-        if err := filepath.Walk(".", func(path string, info os.FileInfo, err error) error </span><span class="cov10" title="6732">{
+        if err := filepath.Walk(".", func(path string, info os.FileInfo, err error) error </span><span class="cov10" title="7650">{
                 if err != nil </span><span class="cov0" title="0">{
                         return nil
                 }</span>
 
-                <span class="cov10" title="6732">if info.IsDir() &amp;&amp; strings.Contains(strings.ToLower(info.Name()), "handler") </span><span class="cov0" title="0">{
+                <span class="cov10" title="7650">if info.IsDir() &amp;&amp; strings.Contains(strings.ToLower(info.Name()), "handler") </span><span class="cov0" title="0">{
                         if hasGoFiles(path) </span><span class="cov0" title="0">{
                                 foundDir = path
                                 return filepath.SkipDir // stop search
                         }</span>
                 }
 
-                <span class="cov10" title="6732">return nil</span>
+                <span class="cov10" title="7650">return nil</span>
         }); err != nil <span class="cov0" title="0">{
                 LogSilent("gin-decorators: Error walking directory: %v", err)
         }</span>
@@ -10765,7 +10750,7 @@ func hasGoFiles(dir string) bool <span class="cov5" title="122">{
                 return false
         }</span>
 
-        <span class="cov5" title="118">for _, entry := range entries </span><span class="cov8" title="1018">{
+        <span class="cov5" title="118">for _, entry := range entries </span><span class="cov7" title="1032">{
                 if !entry.IsDir() &amp;&amp; strings.HasSuffix(entry.Name(), ".go") </span><span class="cov5" title="110">{
                         return true
                 }</span>

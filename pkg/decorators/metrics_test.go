@@ -79,7 +79,6 @@ func TestMetricsMiddleware(t *testing.T) {
 }
 
 func TestMetricsResponseWriter(t *testing.T) {
-
 	gin.SetMode(gin.TestMode)
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
@@ -138,7 +137,6 @@ func TestGetEndpointPattern(t *testing.T) {
 }
 
 func TestRecordCacheHit(t *testing.T) {
-
 	// Test that function doesn't panic
 	assert.NotPanics(t, func() {
 		RecordCacheHit("memory", "url")
@@ -150,7 +148,6 @@ func TestRecordCacheHit(t *testing.T) {
 }
 
 func TestRecordCacheMiss(t *testing.T) {
-
 	// Test that function doesn't panic
 	assert.NotPanics(t, func() {
 		RecordCacheMiss("memory", "url")
@@ -162,7 +159,6 @@ func TestRecordCacheMiss(t *testing.T) {
 }
 
 func TestRecordCacheSize(t *testing.T) {
-
 	// Test that function doesn't panic
 	assert.NotPanics(t, func() {
 		RecordCacheSize("memory", 100.0)
@@ -174,7 +170,6 @@ func TestRecordCacheSize(t *testing.T) {
 }
 
 func TestRecordRateLimitHit(t *testing.T) {
-
 	// Test that function doesn't panic
 	assert.NotPanics(t, func() {
 		RecordRateLimitHit("/api/users", "ip")
@@ -186,7 +181,6 @@ func TestRecordRateLimitHit(t *testing.T) {
 }
 
 func TestRecordRateLimitExceeded(t *testing.T) {
-
 	// Test that function doesn't panic
 	assert.NotPanics(t, func() {
 		RecordRateLimitExceeded("/api/users", "ip")
@@ -198,7 +192,6 @@ func TestRecordRateLimitExceeded(t *testing.T) {
 }
 
 func TestRecordValidationError(t *testing.T) {
-
 	// Test that function doesn't panic
 	assert.NotPanics(t, func() {
 		RecordValidationError("json", "email")
@@ -210,7 +203,6 @@ func TestRecordValidationError(t *testing.T) {
 }
 
 func TestRecordValidationTime(t *testing.T) {
-
 	// Test that function doesn't panic
 	assert.NotPanics(t, func() {
 		RecordValidationTime("json", 100*time.Millisecond)
@@ -222,7 +214,6 @@ func TestRecordValidationTime(t *testing.T) {
 }
 
 func TestRecordMiddlewareTime(t *testing.T) {
-
 	// Test that function doesn't panic
 	assert.NotPanics(t, func() {
 		RecordMiddlewareTime("auth", "/api/users", 10*time.Millisecond)
@@ -234,7 +225,6 @@ func TestRecordMiddlewareTime(t *testing.T) {
 }
 
 func TestRecordMiddlewareError(t *testing.T) {
-
 	// Test that function doesn't panic
 	assert.NotPanics(t, func() {
 		RecordMiddlewareError("auth", "invalid_token")
@@ -267,7 +257,6 @@ func TestPrometheusHandler(t *testing.T) {
 }
 
 func TestHealthCheckHandler(t *testing.T) {
-
 	handler := HealthCheckHandler()
 	assert.NotNil(t, handler)
 
@@ -282,14 +271,12 @@ func TestHealthCheckHandler(t *testing.T) {
 	assert.NotPanics(t, func() {
 		handler(c)
 	})
-
 	// Check response
 	assert.Equal(t, http.StatusOK, w.Code)
 	assert.Contains(t, w.Body.String(), "healthy")
 }
 
 func TestCreateMetricsMiddlewareFromArgs(t *testing.T) {
-
 	// Test with valid args
 	args := []string{"enabled=true", "namespace=test", "subsystem=api"}
 	middleware := createMetricsMiddleware(args)
@@ -307,7 +294,6 @@ func TestCreateMetricsMiddlewareFromArgs(t *testing.T) {
 }
 
 func TestGetMetricsInfo(t *testing.T) {
-
 	config := &MetricsConfig{
 		Enabled:   true,
 		Endpoint:  "/metrics",

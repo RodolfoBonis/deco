@@ -12,8 +12,8 @@ import (
 )
 
 // Tests for rate limiting functionality
-func TestNewMemoryRateLimiter(t *testing.T) {
 
+func TestNewMemoryRateLimiter(t *testing.T) {
 	limiter := NewMemoryRateLimiter()
 	assert.NotNil(t, limiter)
 	assert.NotNil(t, limiter.buckets)
@@ -21,7 +21,6 @@ func TestNewMemoryRateLimiter(t *testing.T) {
 }
 
 func TestMemoryRateLimiter_Allow_FirstRequest(t *testing.T) {
-
 	limiter := NewMemoryRateLimiter()
 	ctx := context.Background()
 
@@ -35,7 +34,6 @@ func TestMemoryRateLimiter_Allow_FirstRequest(t *testing.T) {
 }
 
 func TestMemoryRateLimiter_Allow_WithinLimit(t *testing.T) {
-
 	limiter := NewMemoryRateLimiter()
 	ctx := context.Background()
 	key := "test-key"
@@ -54,7 +52,6 @@ func TestMemoryRateLimiter_Allow_WithinLimit(t *testing.T) {
 }
 
 func TestMemoryRateLimiter_Allow_ExceedLimit(t *testing.T) {
-
 	limiter := NewMemoryRateLimiter()
 	ctx := context.Background()
 	key := "test-key"
@@ -76,7 +73,6 @@ func TestMemoryRateLimiter_Allow_ExceedLimit(t *testing.T) {
 }
 
 func TestMemoryRateLimiter_Allow_ContextCancellation(t *testing.T) {
-
 	limiter := NewMemoryRateLimiter()
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel() // Cancel immediately
@@ -90,7 +86,6 @@ func TestMemoryRateLimiter_Allow_ContextCancellation(t *testing.T) {
 }
 
 func TestMemoryRateLimiter_Reset(t *testing.T) {
-
 	limiter := NewMemoryRateLimiter()
 	ctx := context.Background()
 	key := "test-key"
@@ -106,7 +101,6 @@ func TestMemoryRateLimiter_Reset(t *testing.T) {
 }
 
 func TestMemoryRateLimiter_Reset_ContextCancellation(t *testing.T) {
-
 	limiter := NewMemoryRateLimiter()
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel() // Cancel immediately
@@ -116,7 +110,6 @@ func TestMemoryRateLimiter_Reset_ContextCancellation(t *testing.T) {
 }
 
 func TestMemoryRateLimiter_TokenRefill(t *testing.T) {
-
 	limiter := NewMemoryRateLimiter()
 	ctx := context.Background()
 	key := "test-key"
@@ -141,7 +134,6 @@ func TestMemoryRateLimiter_TokenRefill(t *testing.T) {
 }
 
 func TestNewRedisRateLimiter_InvalidConfig(t *testing.T) {
-
 	config := RedisConfig{
 		Address: "invalid:6379",
 	}
@@ -350,7 +342,6 @@ func TestCustomRateLimit(t *testing.T) {
 }
 
 func TestParseRateLimitArgs(t *testing.T) {
-
 	tests := []struct {
 		name           string
 		args           []string
@@ -453,7 +444,6 @@ func TestCreateRateLimitMiddlewareInternal(t *testing.T) {
 }
 
 func TestMinValue(t *testing.T) {
-
 	assert.Equal(t, 5, minValue(5, 10))
 	assert.Equal(t, 3, minValue(10, 3))
 	assert.Equal(t, 7, minValue(7, 7))
@@ -462,7 +452,6 @@ func TestMinValue(t *testing.T) {
 }
 
 func TestRateLimitResponse_Structure(t *testing.T) {
-
 	response := RateLimitResponse{
 		Error:      "rate_limit_exceeded",
 		Message:    "Too many requests",
@@ -479,7 +468,6 @@ func TestRateLimitResponse_Structure(t *testing.T) {
 }
 
 func TestRateLimiter_Interface(_ *testing.T) {
-
 	// Test that MemoryRateLimiter implements RateLimiter interface
 	var _ RateLimiter = (*MemoryRateLimiter)(nil)
 
@@ -488,7 +476,6 @@ func TestRateLimiter_Interface(_ *testing.T) {
 }
 
 func TestTokenBucket_Structure(t *testing.T) {
-
 	bucket := &TokenBucket{
 		tokens:     5,
 		lastRefill: time.Now(),

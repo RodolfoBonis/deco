@@ -42,7 +42,6 @@ func TestRegisterMarker(t *testing.T) {
 }
 
 func TestGetMarkers(t *testing.T) {
-
 	markers := GetMarkers()
 
 	// Should contain default markers
@@ -61,7 +60,6 @@ func TestGetMarkers(t *testing.T) {
 }
 
 func TestDefaultMarkers_Registration(t *testing.T) {
-
 	markers := GetMarkers()
 
 	// Test that all default markers are registered
@@ -80,7 +78,6 @@ func TestDefaultMarkers_Registration(t *testing.T) {
 }
 
 func TestMarkerPatterns(t *testing.T) {
-
 	markers := GetMarkers()
 
 	tests := []struct {
@@ -119,7 +116,6 @@ func TestMarkerPatterns(t *testing.T) {
 }
 
 func TestParseKeyValue(t *testing.T) {
-
 	tests := []struct {
 		input    string
 		key      string

@@ -11,8 +11,8 @@ import (
 )
 
 // Tests for telemetry functionality
-func TestInitTelemetry_Disabled(t *testing.T) {
 
+func TestInitTelemetry_Disabled(t *testing.T) {
 	config := &TelemetryConfig{
 		Enabled: false,
 	}
@@ -24,7 +24,6 @@ func TestInitTelemetry_Disabled(t *testing.T) {
 }
 
 func TestInitTelemetry_Enabled(t *testing.T) {
-
 	config := &TelemetryConfig{
 		Enabled:        true,
 		ServiceName:    "test-service",
@@ -50,7 +49,6 @@ func TestInitTelemetry_Enabled(t *testing.T) {
 }
 
 func TestTelemetryManager_Shutdown(t *testing.T) {
-
 	manager := &TelemetryManager{
 		config: TelemetryConfig{Enabled: false},
 	}
@@ -114,7 +112,6 @@ func TestTracingMiddleware_Enabled(t *testing.T) {
 }
 
 func TestStartSpan(t *testing.T) {
-
 	ctx := context.Background()
 	spanCtx, span := StartSpan(ctx, "test-span")
 
@@ -128,7 +125,6 @@ func TestStartSpan(t *testing.T) {
 }
 
 func TestSpanFromContext(t *testing.T) {
-
 	ctx := context.Background()
 	span := SpanFromContext(ctx)
 
@@ -137,7 +133,6 @@ func TestSpanFromContext(t *testing.T) {
 }
 
 func TestAddSpanAttributes(t *testing.T) {
-
 	ctx := context.Background()
 
 	// This should not panic even without a real span
@@ -147,7 +142,6 @@ func TestAddSpanAttributes(t *testing.T) {
 }
 
 func TestAddSpanEvent(t *testing.T) {
-
 	ctx := context.Background()
 
 	// This should not panic even without a real span
@@ -157,7 +151,6 @@ func TestAddSpanEvent(t *testing.T) {
 }
 
 func TestSetSpanError(t *testing.T) {
-
 	ctx := context.Background()
 
 	// This should not panic even without a real span
@@ -186,7 +179,6 @@ func TestTraceMiddleware(t *testing.T) {
 }
 
 func TestTraceCacheOperation(t *testing.T) {
-
 	ctx := context.Background()
 	spanCtx, span := TraceCacheOperation(ctx, "get", "memory", "test-key")
 
@@ -200,7 +192,6 @@ func TestTraceCacheOperation(t *testing.T) {
 }
 
 func TestTraceRateLimitOperation(t *testing.T) {
-
 	ctx := context.Background()
 	spanCtx, span := TraceRateLimitOperation(ctx, "check", "ip", true)
 
@@ -214,7 +205,6 @@ func TestTraceRateLimitOperation(t *testing.T) {
 }
 
 func TestTraceValidationOperation(t *testing.T) {
-
 	ctx := context.Background()
 	spanCtx, span := TraceValidationOperation(ctx, "json", 5)
 
@@ -228,7 +218,6 @@ func TestTraceValidationOperation(t *testing.T) {
 }
 
 func TestTraceWebSocketOperation(t *testing.T) {
-
 	ctx := context.Background()
 	spanCtx, span := TraceWebSocketOperation(ctx, "connect", "conn-123")
 
@@ -242,7 +231,6 @@ func TestTraceWebSocketOperation(t *testing.T) {
 }
 
 func TestGetTracingInfo(t *testing.T) {
-
 	config := &TelemetryConfig{
 		Enabled:        true,
 		ServiceName:    "test-service",
@@ -355,7 +343,6 @@ func TestInstrumentedHandler(t *testing.T) {
 }
 
 func TestTelemetryConfig_Structure(t *testing.T) {
-
 	config := &TelemetryConfig{
 		Enabled:        true,
 		ServiceName:    "test-service",
@@ -376,7 +363,6 @@ func TestTelemetryConfig_Structure(t *testing.T) {
 }
 
 func TestTracingInfo_Structure(t *testing.T) {
-
 	info := TracingInfo{
 		Enabled:        true,
 		ServiceName:    "test-service",
@@ -401,7 +387,6 @@ func TestTracingInfo_Structure(t *testing.T) {
 }
 
 func TestTelemetryManager_Structure(t *testing.T) {
-
 	manager := &TelemetryManager{
 		config: TelemetryConfig{
 			Enabled:     true,

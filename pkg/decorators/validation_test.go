@@ -36,6 +36,7 @@ type TestQueryParams struct {
 }
 
 // Tests for JSON validation middleware
+
 func TestValidateJSON_ValidData(t *testing.T) {
 	config := &ValidationConfig{
 		Enabled:     true,
@@ -107,7 +108,6 @@ func TestValidateJSON_InvalidData(t *testing.T) {
 }
 
 func TestValidateJSON_InvalidJSON(t *testing.T) {
-
 	config := &ValidationConfig{
 		Enabled:     true,
 		FailFast:    false,
@@ -132,8 +132,8 @@ func TestValidateJSON_InvalidJSON(t *testing.T) {
 }
 
 // Tests for query validation middleware
-func TestValidateQuery_ValidData(t *testing.T) {
 
+func TestValidateQuery_ValidData(t *testing.T) {
 	config := &ValidationConfig{
 		Enabled:     true,
 		FailFast:    false,
@@ -157,7 +157,6 @@ func TestValidateQuery_ValidData(t *testing.T) {
 }
 
 func TestValidateQuery_InvalidData(t *testing.T) {
-
 	config := &ValidationConfig{
 		Enabled:     true,
 		FailFast:    false,
@@ -187,8 +186,8 @@ func TestValidateQuery_InvalidData(t *testing.T) {
 }
 
 // Tests for parameter validation middleware
-func TestValidateParams(t *testing.T) {
 
+func TestValidateParams(t *testing.T) {
 	config := &ValidationConfig{
 		Enabled:     true,
 		FailFast:    false,
@@ -217,8 +216,8 @@ func TestValidateParams(t *testing.T) {
 }
 
 // Tests for parameter value validation
-func TestValidateParamValue(t *testing.T) {
 
+func TestValidateParamValue(t *testing.T) {
 	tests := []struct {
 		name     string
 		value    string
@@ -246,8 +245,8 @@ func TestValidateParamValue(t *testing.T) {
 }
 
 // Tests for custom validators
-func TestCustomValidators(t *testing.T) {
 
+func TestCustomValidators(t *testing.T) {
 	// Test that custom validators are registered and can be called
 	// Since these functions require validator.FieldLevel which is complex to mock,
 	// we'll test that the functions exist and can be referenced
@@ -264,8 +263,8 @@ func TestCustomValidators(t *testing.T) {
 }
 
 // Tests for validation message generation
-func TestGetValidationMessage(t *testing.T) {
 
+func TestGetValidationMessage(t *testing.T) {
 	config := &ValidationConfig{
 		Enabled:     true,
 		FailFast:    false,
@@ -283,8 +282,8 @@ func TestGetValidationMessage(t *testing.T) {
 }
 
 // Tests for validation response structure
-func TestValidationResponse_Structure(t *testing.T) {
 
+func TestValidationResponse_Structure(t *testing.T) {
 	response := ValidationResponse{
 		Error:   "validation_failed",
 		Message: "Validation failed",
@@ -312,8 +311,8 @@ func TestValidationResponse_Structure(t *testing.T) {
 }
 
 // Tests for validation field structure
-func TestValidationField_Structure(t *testing.T) {
 
+func TestValidationField_Structure(t *testing.T) {
 	field := ValidationField{
 		Field:   "name",
 		Message: "Name is required",
@@ -336,8 +335,8 @@ func TestValidationField_Structure(t *testing.T) {
 }
 
 // Tests for getting validated data
-func TestGetValidatedData(t *testing.T) {
 
+func TestGetValidatedData(t *testing.T) {
 	config := &ValidationConfig{
 		Enabled:     true,
 		FailFast:    false,
@@ -374,8 +373,8 @@ func TestGetValidatedData(t *testing.T) {
 }
 
 // Tests for getting validated query
-func TestGetValidatedQuery(t *testing.T) {
 
+func TestGetValidatedQuery(t *testing.T) {
 	config := &ValidationConfig{
 		Enabled:     true,
 		FailFast:    false,
@@ -403,8 +402,8 @@ func TestGetValidatedQuery(t *testing.T) {
 }
 
 // Tests for getting detailed validation message
-func TestGetDetailedValidationMessage(t *testing.T) {
 
+func TestGetDetailedValidationMessage(t *testing.T) {
 	config := &ValidationConfig{
 		Enabled:     true,
 		FailFast:    false,
@@ -416,8 +415,8 @@ func TestGetDetailedValidationMessage(t *testing.T) {
 }
 
 // Test validation middleware edge cases
-func TestValidateJSON_EdgeCases(t *testing.T) {
 
+func TestValidateJSON_EdgeCases(t *testing.T) {
 	config := &ValidationConfig{
 		Enabled:     true,
 		FailFast:    false,
@@ -443,8 +442,8 @@ func TestValidateJSON_EdgeCases(t *testing.T) {
 }
 
 // Test validation config default values
-func TestValidationConfig_DefaultValues(t *testing.T) {
 
+func TestValidationConfig_DefaultValues(t *testing.T) {
 	config := &ValidationConfig{
 		Enabled:     true,
 		FailFast:    false,
@@ -456,8 +455,8 @@ func TestValidationConfig_DefaultValues(t *testing.T) {
 }
 
 // Test validation error formats
-func TestValidationError_Formats(t *testing.T) {
 
+func TestValidationError_Formats(t *testing.T) {
 	tests := []struct {
 		format        string
 		shouldContain string
@@ -496,8 +495,8 @@ func TestValidationError_Formats(t *testing.T) {
 }
 
 // Test disabled validation
-func TestValidationMiddleware_Disabled(t *testing.T) {
 
+func TestValidationMiddleware_Disabled(t *testing.T) {
 	config := &ValidationConfig{
 		Enabled: false,
 	}
@@ -522,8 +521,8 @@ func TestValidationMiddleware_Disabled(t *testing.T) {
 }
 
 // Test fail fast behavior
-func TestValidationMiddleware_FailFast(t *testing.T) {
 
+func TestValidationMiddleware_FailFast(t *testing.T) {
 	config := &ValidationConfig{
 		Enabled:  true,
 		FailFast: true,
@@ -547,8 +546,8 @@ func TestValidationMiddleware_FailFast(t *testing.T) {
 }
 
 // Test query parameter validation
-func TestValidateQuery_EdgeCases(t *testing.T) {
 
+func TestValidateQuery_EdgeCases(t *testing.T) {
 	config := &ValidationConfig{
 		Enabled:     true,
 		FailFast:    false,
@@ -578,8 +577,8 @@ func TestValidateQuery_EdgeCases(t *testing.T) {
 }
 
 // Test parameter validation
-func TestValidateParams_EdgeCases(t *testing.T) {
 
+func TestValidateParams_EdgeCases(t *testing.T) {
 	config := &ValidationConfig{
 		Enabled:     true,
 		FailFast:    false,
@@ -607,6 +606,7 @@ func TestValidateParams_EdgeCases(t *testing.T) {
 }
 
 // Test concurrent validation requests
+
 func TestValidationMiddleware_Concurrent(t *testing.T) {
 	config := &ValidationConfig{
 		Enabled:     true,
@@ -645,6 +645,7 @@ func TestValidationMiddleware_Concurrent(t *testing.T) {
 }
 
 // Test validation performance
+
 func TestValidationMiddleware_Performance(t *testing.T) {
 	config := &ValidationConfig{
 		Enabled:     true,
@@ -682,8 +683,8 @@ func TestValidationMiddleware_Performance(t *testing.T) {
 }
 
 // Test error handling scenarios
-func TestValidationMiddleware_ErrorHandling(t *testing.T) {
 
+func TestValidationMiddleware_ErrorHandling(t *testing.T) {
 	config := &ValidationConfig{
 		Enabled:     true,
 		FailFast:    false,
@@ -751,8 +752,8 @@ func TestValidationMiddleware_ErrorHandling(t *testing.T) {
 }
 
 // Test file upload validation
-func TestValidationMiddleware_FileUpload(t *testing.T) {
 
+func TestValidationMiddleware_FileUpload(t *testing.T) {
 	config := &ValidationConfig{
 		Enabled:     true,
 		FailFast:    false,

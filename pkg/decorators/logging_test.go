@@ -9,7 +9,6 @@ import (
 )
 
 func TestLogLevel_Constants(t *testing.T) {
-
 	// Test log level constants
 	assert.Equal(t, LogLevel(0), LogLevelSilent)
 	assert.Equal(t, LogLevel(1), LogLevelNormal)
@@ -21,7 +20,6 @@ func TestLogLevel_Constants(t *testing.T) {
 }
 
 func TestSetLogLevel(t *testing.T) {
-
 	// Test setting different log levels
 	SetLogLevel(LogLevelSilent)
 	assert.Equal(t, LogLevelSilent, GetLogLevel())

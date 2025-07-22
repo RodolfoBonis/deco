@@ -283,8 +283,8 @@ func TestCreateProxyMiddleware(t *testing.T) {
 }
 
 // Tests for health checks functionality
-func TestProxyManager_PerformHealthChecks(t *testing.T) {
 
+func TestProxyManager_PerformHealthChecks(t *testing.T) {
 	config := &ProxyConfig{
 		HealthInterval: "30s",
 		HealthCheck:    "/health",
@@ -301,7 +301,6 @@ func TestProxyManager_PerformHealthChecks(t *testing.T) {
 }
 
 func TestProxyManager_PerformServiceDiscovery(t *testing.T) {
-
 	config := &ProxyConfig{
 		Discovery:     "static",
 		ConsulAddress: "http://localhost:8500",
@@ -319,6 +318,7 @@ func TestProxyManager_PerformServiceDiscovery(t *testing.T) {
 }
 
 // Tests for proxy middleware with basic configuration
+
 func TestProxyMiddleware_Basic(t *testing.T) {
 	// Clear cache before test
 	clearProxyManagers()
@@ -343,6 +343,7 @@ func TestProxyMiddleware_Basic(t *testing.T) {
 }
 
 // Tests for proxy with circuit breaker
+
 func TestProxyMiddleware_WithCircuitBreaker(t *testing.T) {
 	// Clear cache before test
 	clearProxyManagers()
@@ -367,6 +368,7 @@ func TestProxyMiddleware_WithCircuitBreaker(t *testing.T) {
 }
 
 // Tests for proxy with retry logic
+
 func TestProxyMiddleware_WithRetry(t *testing.T) {
 	// Clear cache before test
 	clearProxyManagers()
@@ -392,6 +394,7 @@ func TestProxyMiddleware_WithRetry(t *testing.T) {
 }
 
 // Tests for proxy error handling
+
 func TestProxyMiddleware_ErrorHandling(t *testing.T) {
 	// Clear cache before test
 	clearProxyManagers()
@@ -415,6 +418,7 @@ func TestProxyMiddleware_ErrorHandling(t *testing.T) {
 }
 
 // Tests for proxy with custom headers
+
 func TestProxyMiddleware_WithCustomHeaders(t *testing.T) {
 	// Clear cache before test
 	clearProxyManagers()
@@ -438,6 +442,7 @@ func TestProxyMiddleware_WithCustomHeaders(t *testing.T) {
 }
 
 // Tests for proxy with path rewriting
+
 func TestProxyMiddleware_WithPathRewriting(t *testing.T) {
 	// Clear cache before test
 	clearProxyManagers()
@@ -461,8 +466,8 @@ func TestProxyMiddleware_WithPathRewriting(t *testing.T) {
 }
 
 // Tests for proxy manager creation
-func TestNewProxyManager(t *testing.T) {
 
+func TestNewProxyManager(t *testing.T) {
 	config := &ProxyConfig{
 		Target:         "http://localhost:8080",
 		Timeout:        "10s",
@@ -481,8 +486,8 @@ func TestNewProxyManager(t *testing.T) {
 }
 
 // Tests for proxy config parsing
-func TestParseProxyConfig_ValidArgs(t *testing.T) {
 
+func TestParseProxyConfig_ValidArgs(t *testing.T) {
 	args := []string{
 		"target=http://localhost:8080",
 		"timeout=15s",
@@ -511,8 +516,8 @@ func TestParseProxyConfig_ValidArgs(t *testing.T) {
 }
 
 // Tests for proxy config parsing with invalid values
-func TestParseProxyConfig_InvalidValues(t *testing.T) {
 
+func TestParseProxyConfig_InvalidValues(t *testing.T) {
 	args := []string{
 		"target=http://localhost:8080",
 		"timeout=invalid",
@@ -530,8 +535,8 @@ func TestParseProxyConfig_InvalidValues(t *testing.T) {
 }
 
 // Tests for proxy config parsing with malformed arguments
-func TestParseProxyConfig_MalformedArgs(t *testing.T) {
 
+func TestParseProxyConfig_MalformedArgs(t *testing.T) {
 	args := []string{
 		"target=http://localhost:8080",
 		"invalid-arg",

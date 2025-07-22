@@ -8,8 +8,8 @@ import (
 )
 
 // Tests for service discovery functionality
-func TestNewConsulDiscovery(t *testing.T) {
 
+func TestNewConsulDiscovery(t *testing.T) {
 	t.Run("with address", func(t *testing.T) {
 		discovery := NewConsulDiscovery("consul.example.com:8500")
 		assert.NotNil(t, discovery)
@@ -24,7 +24,6 @@ func TestNewConsulDiscovery(t *testing.T) {
 }
 
 func TestConsulDiscovery_Discover_NoClient(t *testing.T) {
-
 	discovery := &ConsulDiscovery{
 		address: "invalid:8500",
 		client:  nil,
@@ -37,13 +36,11 @@ func TestConsulDiscovery_Discover_NoClient(t *testing.T) {
 }
 
 func TestNewDNSDiscovery(t *testing.T) {
-
 	discovery := NewDNSDiscovery()
 	assert.NotNil(t, discovery)
 }
 
 func TestDNSDiscovery_Discover(t *testing.T) {
-
 	discovery := NewDNSDiscovery()
 
 	t.Run("valid domain", func(t *testing.T) {
@@ -76,7 +73,6 @@ func TestDNSDiscovery_Discover(t *testing.T) {
 }
 
 func TestNewK8sDiscovery(t *testing.T) {
-
 	t.Run("with namespace", func(t *testing.T) {
 		discovery := NewK8sDiscovery("production")
 		assert.NotNil(t, discovery)
@@ -91,7 +87,6 @@ func TestNewK8sDiscovery(t *testing.T) {
 }
 
 func TestK8sDiscovery_Discover(t *testing.T) {
-
 	discovery := NewK8sDiscovery("test-namespace")
 
 	t.Run("valid service", func(t *testing.T) {
@@ -125,7 +120,6 @@ func TestK8sDiscovery_Discover(t *testing.T) {
 }
 
 func TestNewStaticDiscovery(t *testing.T) {
-
 	targets := []string{
 		"http://service1.example.com:8080",
 		"http://service2.example.com:8080",
@@ -138,7 +132,6 @@ func TestNewStaticDiscovery(t *testing.T) {
 }
 
 func TestStaticDiscovery_Discover(t *testing.T) {
-
 	targets := []string{
 		"http://service1.example.com:8080",
 		"http://service2.example.com:8080",
@@ -162,7 +155,6 @@ func TestStaticDiscovery_Discover(t *testing.T) {
 }
 
 func TestStaticDiscovery_Discover_EmptyTargets(t *testing.T) {
-
 	discovery := NewStaticDiscovery([]string{})
 
 	instances, err := discovery.Discover("any-service")
@@ -172,7 +164,6 @@ func TestStaticDiscovery_Discover_EmptyTargets(t *testing.T) {
 }
 
 func TestStaticDiscovery_Discover_WithSpaces(t *testing.T) {
-
 	targets := []string{
 		"  http://service1.example.com:8080  ",
 		"  http://service2.example.com:8080  ",
@@ -197,7 +188,6 @@ func TestStaticDiscovery_Discover_WithSpaces(t *testing.T) {
 }
 
 func TestProxyInstance_Structure(t *testing.T) {
-
 	instance := &ProxyInstance{
 		URL:       "http://example.com:8080",
 		Weight:    5,
@@ -218,7 +208,6 @@ func TestProxyInstance_Structure(t *testing.T) {
 }
 
 func TestServiceDiscovery_InterfaceCompliance(_ *testing.T) {
-
 	// Test that all discovery types can be used interchangeably
 	// This is a compile-time test to ensure interface compliance
 
@@ -240,7 +229,6 @@ func TestServiceDiscovery_InterfaceCompliance(_ *testing.T) {
 }
 
 func TestConsulDiscovery_Structure(t *testing.T) {
-
 	discovery := &ConsulDiscovery{
 		address: "consul.example.com:8500",
 		client:  nil,
@@ -251,13 +239,11 @@ func TestConsulDiscovery_Structure(t *testing.T) {
 }
 
 func TestDNSDiscovery_Structure(t *testing.T) {
-
 	discovery := &DNSDiscovery{}
 	assert.NotNil(t, discovery)
 }
 
 func TestK8sDiscovery_Structure(t *testing.T) {
-
 	discovery := &K8sDiscovery{
 		namespace: "production",
 	}
@@ -266,7 +252,6 @@ func TestK8sDiscovery_Structure(t *testing.T) {
 }
 
 func TestStaticDiscovery_Structure(t *testing.T) {
-
 	targets := []string{"http://service1.com", "http://service2.com"}
 	discovery := &StaticDiscovery{
 		targets: targets,
@@ -276,7 +261,6 @@ func TestStaticDiscovery_Structure(t *testing.T) {
 }
 
 func TestServiceDiscovery_ErrorHandling(t *testing.T) {
-
 	t.Run("consul with invalid address", func(t *testing.T) {
 		discovery := NewConsulDiscovery("invalid-address:99999")
 		instances, err := discovery.Discover("test-service")
@@ -300,7 +284,6 @@ func TestServiceDiscovery_ErrorHandling(t *testing.T) {
 }
 
 func TestServiceDiscovery_MetadataHandling(t *testing.T) {
-
 	t.Run("static discovery metadata", func(t *testing.T) {
 		targets := []string{"http://service1.com"}
 		discovery := NewStaticDiscovery(targets)

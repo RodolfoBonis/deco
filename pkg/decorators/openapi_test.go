@@ -47,7 +47,6 @@ func TestGenerateOpenAPISpec(t *testing.T) {
 }
 
 func TestConvertRouteToOperation(t *testing.T) {
-
 	route := &RouteEntry{
 		Method:      "POST",
 		Path:        "/users",
@@ -589,7 +588,6 @@ func TestOpenAPISpec_Concurrency(t *testing.T) {
 }
 
 func TestOpenAPISpec_ErrorHandling(t *testing.T) {
-
 	// Test with nil config
 	t.Run("should handle nil config", func(t *testing.T) {
 		spec := GenerateOpenAPISpec(nil)

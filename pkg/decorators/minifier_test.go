@@ -11,7 +11,6 @@ import (
 )
 
 func TestMinifyCode_Disabled(t *testing.T) {
-
 	// Create temporary files
 	tempDir := t.TempDir()
 	inputPath := filepath.Join(tempDir, "input.go")
@@ -42,7 +41,6 @@ func main() {
 }
 
 func TestMinifyCode_Enabled(t *testing.T) {
-
 	// Create temporary files
 	tempDir := t.TempDir()
 	inputPath := filepath.Join(tempDir, "input.go")
@@ -94,7 +92,6 @@ func main() {
 }
 
 func TestMinifyCode_WithGeneratedComments(t *testing.T) {
-
 	// Create temporary files
 	tempDir := t.TempDir()
 	inputPath := filepath.Join(tempDir, "input.go")
@@ -132,7 +129,6 @@ func main() {
 }
 
 func TestMinifyGoCode(t *testing.T) {
-
 	tests := []struct {
 		name     string
 		input    string
@@ -180,7 +176,6 @@ func main() {
 }
 
 func TestMinifyWithAST(t *testing.T) {
-
 	// Test with valid Go code
 	code := `package main
 
@@ -239,7 +234,6 @@ func main() {
 }
 
 func TestMinifyWithRegex(t *testing.T) {
-
 	tests := []struct {
 		name     string
 		input    string
@@ -286,7 +280,6 @@ func main() {
 }
 
 func TestApplyAdditionalMinification(t *testing.T) {
-
 	tests := []struct {
 		name     string
 		input    string
@@ -321,7 +314,6 @@ func main() {
 }
 
 func TestCompactImports(t *testing.T) {
-
 	tests := []struct {
 		name     string
 		input    string
@@ -366,7 +358,6 @@ func main() {
 }
 
 func TestCopyFile(t *testing.T) {
-
 	// Create temporary files
 	tempDir := t.TempDir()
 	srcPath := filepath.Join(tempDir, "source.txt")
@@ -388,7 +379,6 @@ func TestCopyFile(t *testing.T) {
 }
 
 func TestCopyFile_NonExistentSource(t *testing.T) {
-
 	// Create temporary directory
 	tempDir := t.TempDir()
 	srcPath := filepath.Join(tempDir, "nonexistent.txt")
@@ -400,7 +390,6 @@ func TestCopyFile_NonExistentSource(t *testing.T) {
 }
 
 func TestGetMinifiedTemplate(t *testing.T) {
-
 	template := GetMinifiedTemplate()
 	assert.NotEmpty(t, template)
 
@@ -420,7 +409,6 @@ func TestGetMinifiedTemplate(t *testing.T) {
 }
 
 func TestMinifyCode_ComplexGoFile(t *testing.T) {
-
 	// Create temporary files
 	tempDir := t.TempDir()
 	inputPath := filepath.Join(tempDir, "input.go")

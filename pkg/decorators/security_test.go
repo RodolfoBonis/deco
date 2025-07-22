@@ -11,8 +11,8 @@ import (
 )
 
 // Tests for security functionality
-func TestDefaultSecurityConfig(t *testing.T) {
 
+func TestDefaultSecurityConfig(t *testing.T) {
 	config := DefaultSecurityConfig()
 	assert.NotNil(t, config)
 	assert.True(t, config.AllowLocalhost)
@@ -177,7 +177,6 @@ func TestSecureInternalEndpoints_AllowWildcardHostname(t *testing.T) {
 }
 
 func TestGetClientIP_Headers(t *testing.T) {
-
 	t.Run("X-Forwarded-For header", func(t *testing.T) {
 		gin.SetMode(gin.TestMode)
 		w := httptest.NewRecorder()
@@ -224,7 +223,6 @@ func TestGetClientIP_Headers(t *testing.T) {
 }
 
 func TestIsIPAllowed(t *testing.T) {
-
 	tests := []struct {
 		name            string
 		clientIP        string
@@ -279,7 +277,6 @@ func TestIsIPAllowed(t *testing.T) {
 }
 
 func TestIsHostnameAllowed(t *testing.T) {
-
 	tests := []struct {
 		name         string
 		hostname     string
@@ -419,7 +416,6 @@ func TestAllowSpecificIPs(t *testing.T) {
 }
 
 func TestSecurityConfig_Structure(t *testing.T) {
-
 	config := &SecurityConfig{
 		AllowedNetworks:      []string{"192.168.1.0/24"},
 		AllowedIPs:           []string{"192.168.1.100"},
