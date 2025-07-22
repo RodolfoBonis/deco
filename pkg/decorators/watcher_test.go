@@ -296,18 +296,19 @@ func TestRegenerateCode(t *testing.T) {
 func TestFindCommonRoot(t *testing.T) {
 	// Test finding common root directory
 	paths := []string{
-		"/path/to/file1.go",
-		"/path/to/file2.go",
-		"/path/to/subdir/file3.go",
+		filepath.Join("path", "to", "file1.go"),
+		filepath.Join("path", "to", "file2.go"),
+		filepath.Join("path", "to", "subdir", "file3.go"),
 	}
 
 	commonRoot := findCommonRoot(paths)
-	assert.Equal(t, "/path/to", commonRoot)
+	expectedRoot := filepath.Join("path", "to")
+	assert.Equal(t, expectedRoot, commonRoot)
 
 	// Test with single path
-	singlePath := []string{"/path/to/file.go"}
+	singlePath := []string{filepath.Join("path", "to", "file.go")}
 	commonRoot = findCommonRoot(singlePath)
-	assert.Equal(t, "/path/to", commonRoot)
+	assert.Equal(t, expectedRoot, commonRoot)
 }
 
 func TestIsRunning(t *testing.T) {
