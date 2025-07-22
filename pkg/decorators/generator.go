@@ -236,7 +236,7 @@ func init() {
 	decorators.RegisterRouteWithMeta(&decorators.RouteEntry{
 		Method:      "{{ .Method }}",
 		Path:        "{{ .Path }}",
-		Handler:     {{ if eq $.PackageName "deco" }}handlers.{{ .FuncName }}{{ else }}{{ .FuncName }}{{ end }},
+		Handler:     {{ if eq $.PackageName "deco" }}{{ .PackageName }}.{{ .FuncName }}{{ else }}{{ .FuncName }}{{ end }},
 		{{- if .MiddlewareCalls }}
 		Middlewares: []gin.HandlerFunc{
 			{{- range .MiddlewareCalls }}
@@ -312,14 +312,14 @@ func init() {
 	// WebSocket-only handlers for {{ .FuncName }}
 	{{- $funcName := .FuncName }}
 	{{- range .WebSocketHandlers }}
-	decorators.RegisterWebSocketHandler("{{ . }}", {{ if eq $.PackageName "deco" }}handlers.{{ $funcName }}{{ else }}{{ $funcName }}{{ end }})
+	decorators.RegisterWebSocketHandler("{{ . }}", {{ if eq $.PackageName "deco" }}{{ $funcName }}{{ else }}{{ $funcName }}{{ end }})
 	{{- end }}
 	
 	// Register WebSocket handlers as routes for documentation
 	decorators.RegisterRouteWithMeta(&decorators.RouteEntry{
 		Method:      "WS",
 		Path:        "/ws/{{ .FuncName }}",
-		Handler:     decorators.WebSocketHandlerWrapper({{ if eq $.PackageName "deco" }}handlers.{{ .FuncName }}{{ else }}{{ .FuncName }}{{ end }}),
+		Handler:     decorators.WebSocketHandlerWrapper({{ if eq $.PackageName "deco" }}{{ .FuncName }}{{ else }}{{ .FuncName }}{{ end }}),
 		FuncName:    "{{ .FuncName }}",
 		PackageName: "{{ .PackageName }}",
 		{{- if .Description }}
